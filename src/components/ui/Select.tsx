@@ -23,8 +23,8 @@ export default function Select({ label, options, placeholder, error, className =
         </label>
       )}
       <select
-        className={`border border-text-anthracite/15 bg-white-pure px-3 py-2 text-sm text-text-anthracite focus:outline-none focus:border-prune-main transition-colors ${
-          error ? 'border-alert-red' : ''
+        className={`border bg-white-pure px-3 py-2 text-sm text-text-anthracite focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-prune-main/40 focus-visible:border-prune-main transition-colors ${
+          error ? 'border-alert-red' : 'border-text-anthracite/15'
         } ${className}`}
         {...props}
       >

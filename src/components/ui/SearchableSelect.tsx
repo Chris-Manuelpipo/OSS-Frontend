@@ -69,7 +69,7 @@ export default function SearchableSelect({
       <div className="relative">
         <input
           type="text"
-          className={`w-full border bg-white-pure px-3 py-2 text-sm text-text-anthracite focus:outline-none focus:border-prune-main transition-colors ${
+          className={`w-full border bg-white-pure px-3 py-2 text-sm text-text-anthracite focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-prune-main/40 focus-visible:border-prune-main transition-colors ${
             error ? 'border-alert-red' : 'border-text-anthracite/15'
           }`}
           placeholder={selected ? selected.label : placeholder || ''}
@@ -80,7 +80,7 @@ export default function SearchableSelect({
           disabled={disabled}
           readOnly={disabled}
         />
-        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-text-anthracite/30 pointer-events-none text-xs">
+        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-text-anthracite/45 pointer-events-none text-xs">
           {open ? '▲' : '▼'}
         </span>
       </div>
@@ -100,7 +100,7 @@ export default function SearchableSelect({
               </button>
             ))}
             {filtered.length === 0 && !showCreate && (
-              <div className="px-3 py-2 text-sm text-text-anthracite/40">Aucun résultat</div>
+              <div className="px-3 py-2 text-sm text-text-anthracite/60">Aucun résultat</div>
             )}
             {showCreate && (
               <button

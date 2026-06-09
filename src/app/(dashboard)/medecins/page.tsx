@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { medecins } from '@/data/mock'
 import { Medecin, TypeMedecin } from '@/lib/types'
 import Card from '@/components/ui/Card'
@@ -11,25 +11,43 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Button from '@/components/ui/Button'
 import { useAuth } from '@/hooks/useAuth'
+import { useConfirm } from '@/hooks/useConfirm'
+import { useDebounce } from '@/hooks/useDebounce'
+import { useKeyboard } from '@/hooks/useKeyboard'
+import { useToast } from '@/components/ui/Toast'
 
 export default function MedecinsPage() {
   const router = useRouter()
   const { user } = useAuth()
+  const { confirm: ask, dialog: confirmDialog } = useConfirm()
+  const toast = useToast()
   const [search, setSearch] = useState('')
+  const debouncedSearch = useDebounce(search, 300)
   const [filterType, setFilterType] = useState<TypeMedecin | 'TOUS'>('TOUS')
+  const searchRef = useRef<HTMLInputElement>(null)
   const [deletedIds, setDeletedIds] = useState<number[]>([])
 
   const filtered = medecins.filter(m => {
     if (deletedIds.includes(m.numMedecin)) return false
-    const matchesSearch = `${m.nom} ${m.prenom}`.toLowerCase().includes(search.toLowerCase()) ||
-      (m.email && m.email.toLowerCase().includes(search.toLowerCase()))
+    const matchesSearch = `${m.nom} ${m.prenom}`.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+      (m.email && m.email.toLowerCase().includes(debouncedSearch.toLowerCase()))
     const matchesType = filterType === 'TOUS' || m.typeMedecin === filterType
     return matchesSearch && matchesType
   })
 
-  const handleDelete = (m: Medecin) => {
-    if (window.confirm(`Supprimer Dr. ${m.prenom} ${m.nom} ? Cette action est irréversible.`)) {
+  useKeyboard({
+    '/': () => {
+      if (document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
+        searchRef.current?.focus()
+      }
+    },
+  })
+
+  const handleDelete = async (m: Medecin) => {
+    const ok = await ask(`Êtes-vous sûr de vouloir supprimer Dr. ${m.prenom} ${m.nom} ? Cette action est irréversible.`)
+    if (ok) {
       setDeletedIds(prev => [...prev, m.numMedecin])
+      toast.show(`Dr. ${m.prenom} ${m.nom} a été supprimé`, 'success')
     }
   }
 
@@ -37,6 +55,7 @@ export default function MedecinsPage() {
     {
       key: 'nomComplet',
       header: 'Nom complet',
+      sortable: true,
       render: (m: Medecin) => (
         <div className="flex items-center gap-2">
           <span className="font-medium text-prune-main">Dr. {m.prenom} {m.nom}</span>
@@ -90,8 +109,8 @@ export default function MedecinsPage() {
     <div>
       <div className="flex items-end justify-between mb-6">
         <div>
-          <h1 className="text-xl font-semibold text-prune-main mb-1">Médecins</h1>
-          <p className="text-sm text-text-anthracite/50">{medecins.length} praticiens référencés</p>
+          <h1 className="text-2xl md:text-3xl font-semibold text-prune-main mb-1">Médecins</h1>
+          <p className="text-sm text-text-anthracite/60">{medecins.length} praticiens référencés</p>
         </div>
         {user?.role === 'AGENT_OSS' && (
           <Link href="/medecins/nouveau">
@@ -106,17 +125,19 @@ export default function MedecinsPage() {
       <Card>
         <div className="flex items-center gap-3 mb-4">
           <div className="relative flex-1">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-anthracite/30" />
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-anthracite/45" />
             <input
+              ref={searchRef}
               type="text"
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Rechercher un médecin…"
-              className="w-full border border-text-anthracite/15 bg-white-pure pl-9 pr-3 py-2 text-sm text-text-anthracite placeholder:text-text-anthracite/30 focus:outline-none focus:border-prune-main transition-colors"
+              aria-label="Rechercher un médecin"
+              className="w-full border border-text-anthracite/15 bg-white-pure pl-9 pr-3 py-2 text-sm text-text-anthracite placeholder:text-text-anthracite/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-prune-main/40 focus-visible:border-prune-main transition-colors"
             />
           </div>
           <div className="flex items-center gap-2">
-            <Filter size={16} className="text-text-anthracite/30" />
+            <Filter size={16} className="text-text-anthracite/45" />
             {(['TOUS', 'GENERALISTE', 'SPECIALISTE'] as const).map(type => (
               <button
                 key={type}
@@ -138,6 +159,7 @@ export default function MedecinsPage() {
           onRowClick={(m: Medecin) => router.push(`/medecins/${m.numMedecin}`)}
         />
       </Card>
+      {confirmDialog}
     </div>
   )
 }

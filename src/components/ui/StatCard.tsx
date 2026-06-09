@@ -1,6 +1,7 @@
 'use client'
 
 import { ReactNode } from 'react'
+import { motion } from 'framer-motion'
 import Link from 'next/link'
 
 interface StatCardProps {
@@ -14,9 +15,15 @@ interface StatCardProps {
 
 export default function StatCard({ title, value, subtitle, icon, href, className = '' }: StatCardProps) {
   const inner = (
-    <div className={`bg-white-pure border border-text-anthracite/5 p-6 ${href ? 'cursor-pointer hover:border-prune-sec/20 hover:shadow-sm transition-all' : ''} ${className}`}>
+    <motion.div
+      whileHover={href ? { scale: 1.02 } : undefined}
+      transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+      className={`bg-white-pure border border-text-anthracite/5 p-6 ${
+        href ? 'cursor-pointer hover:border-prune-sec/20 hover:shadow-sm transition-all' : ''
+      } ${className}`}
+    >
       <div className="flex items-start justify-between">
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           <p className="text-xs font-medium uppercase tracking-wider text-text-anthracite/60">
             {title}
           </p>
@@ -24,14 +31,14 @@ export default function StatCard({ title, value, subtitle, icon, href, className
             {value}
           </p>
           {subtitle && (
-            <p className="mt-1 text-xs text-text-anthracite/50">{subtitle}</p>
+            <p className="mt-1 text-xs text-text-anthracite/60 truncate">{subtitle}</p>
           )}
         </div>
         {icon && (
-          <div className="text-prune-sec/40">{icon}</div>
+          <div className="text-prune-sec/60 flex-shrink-0">{icon}</div>
         )}
       </div>
-    </div>
+    </motion.div>
   )
 
   if (href) {

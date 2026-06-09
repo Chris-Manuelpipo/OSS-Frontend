@@ -1,9 +1,13 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef } from 'react'
 import { assures, medecins } from '@/data/mock'
 import { Assure } from '@/lib/types'
 import { useAuth } from '@/hooks/useAuth'
+import { useConfirm } from '@/hooks/useConfirm'
+import { useDebounce } from '@/hooks/useDebounce'
+import { useKeyboard } from '@/hooks/useKeyboard'
+import { useToast } from '@/components/ui/Toast'
 import Card from '@/components/ui/Card'
 import DataTable from '@/components/ui/DataTable'
 import Badge from '@/components/ui/Badge'
@@ -16,7 +20,11 @@ import { formatDateShort } from '@/lib/utils'
 export default function AssuresPage() {
   const router = useRouter()
   const { user } = useAuth()
+  const { confirm: ask, dialog: confirmDialog } = useConfirm()
+  const toast = useToast()
   const [search, setSearch] = useState('')
+  const debouncedSearch = useDebounce(search, 300)
+  const searchRef = useRef<HTMLInputElement>(null)
   const [deletedIds, setDeletedIds] = useState<number[]>([])
 
   const filteredAssures = useMemo(() => {
@@ -28,13 +36,23 @@ export default function AssuresPage() {
   }, [user, deletedIds])
 
   const filtered = filteredAssures.filter(a =>
-    `${a.nom} ${a.prenom}`.toLowerCase().includes(search.toLowerCase()) ||
-    (a.email && a.email.toLowerCase().includes(search.toLowerCase()))
+    `${a.nom} ${a.prenom}`.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+    (a.email && a.email.toLowerCase().includes(debouncedSearch.toLowerCase()))
   )
 
-  const handleDelete = (a: Assure) => {
-    if (window.confirm(`Supprimer ${a.prenom} ${a.nom} (N° ${a.numAssure}) ? Cette action est irréversible.`)) {
+  useKeyboard({
+    '/': () => {
+      if (document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
+        searchRef.current?.focus()
+      }
+    },
+  })
+
+  const handleDelete = async (a: Assure) => {
+    const ok = await ask(`Êtes-vous sûr de vouloir supprimer ${a.prenom} ${a.nom} (N° ${a.numAssure}) ? Cette action est irréversible.`)
+    if (ok) {
       setDeletedIds(prev => [...prev, a.numAssure])
+      toast.show(`${a.prenom} ${a.nom} a été supprimé`, 'success')
     }
   }
 
@@ -43,22 +61,24 @@ export default function AssuresPage() {
       key: 'numAssure',
       header: 'N°',
       render: (a: Assure) => (
-        <span className="text-xs text-text-anthracite/40 font-mono">#{a.numAssure}</span>
+        <span className="text-xs text-text-anthracite/60 font-mono">#{a.numAssure}</span>
       ),
     },
     {
       key: 'nomComplet',
       header: 'Nom complet',
+      sortable: true,
       render: (a: Assure) => (
         <div>
           <span className="font-medium text-prune-main">{a.prenom} {a.nom}</span>
-          {a.email && <p className="text-xs text-text-anthracite/40">{a.email}</p>}
+          {a.email && <p className="text-xs text-text-anthracite/60">{a.email}</p>}
         </div>
       ),
     },
     {
       key: 'dateNaissance',
       header: 'Date naiss.',
+      sortable: true,
       render: (a: Assure) => (
         <span className="text-sm">{formatDateShort(a.dateNaissance)}</span>
       ),
@@ -78,7 +98,7 @@ export default function AssuresPage() {
           {a.nomMedecinTraitant ? (
             <span className="text-prune-sec">{a.nomMedecinTraitant}</span>
           ) : (
-            <span className="text-text-anthracite/30 italic">Non attribué</span>
+            <span className="text-text-anthracite/45 italic">Non attribué</span>
           )}
         </span>
       ),
@@ -87,7 +107,7 @@ export default function AssuresPage() {
       key: 'numCompteBancaire',
       header: 'IBAN',
       render: (a: Assure) => (
-        <span className="text-xs font-mono text-text-anthracite/40">
+        <span className="text-xs font-mono text-text-anthracite/60">
           {a.numCompteBancaire ? a.numCompteBancaire.slice(0, 10) + '…' : '—'}
         </span>
       ),
@@ -111,8 +131,8 @@ export default function AssuresPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-semibold text-prune-main mb-1">Assurés</h1>
-          <p className="text-sm text-text-anthracite/50">{filteredAssures.length} personnes inscrites</p>
+          <h1 className="text-2xl md:text-3xl font-semibold text-prune-main mb-1">Assurés</h1>
+          <p className="text-sm text-text-anthracite/60">{filteredAssures.length} personnes inscrites</p>
         </div>
         {user?.role === 'AGENT_OSS' && (
           <Link href="/assures/nouveau">
@@ -126,13 +146,15 @@ export default function AssuresPage() {
 
       <Card className="mb-6">
         <div className="relative mb-4">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-anthracite/30" />
-          <input
-            type="text"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Rechercher un assuré…"
-            className="w-full border border-text-anthracite/15 bg-white-pure pl-9 pr-3 py-2 text-sm text-text-anthracite placeholder:text-text-anthracite/30 focus:outline-none focus:border-prune-main transition-colors"
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-anthracite/45" />
+            <input
+              ref={searchRef}
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Rechercher un assuré…"
+              aria-label="Rechercher un assuré"
+            className="w-full border border-text-anthracite/15 bg-white-pure pl-9 pr-3 py-2 text-sm text-text-anthracite placeholder:text-text-anthracite/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-prune-main/40 focus-visible:border-prune-main transition-colors"
           />
         </div>
         <DataTable
@@ -141,6 +163,7 @@ export default function AssuresPage() {
           onRowClick={(a: Assure) => router.push(`/assures/${a.numAssure}`)}
         />
       </Card>
+      {confirmDialog}
     </div>
   )
 }

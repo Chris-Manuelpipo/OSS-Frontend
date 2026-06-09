@@ -1,8 +1,11 @@
 'use client'
 
-import { useState, FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
+import { useForm, Controller } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { useKeyboard } from '@/hooks/useKeyboard'
 import { medecins } from '@/data/mock'
+import { assureSchema, type AssureFormData } from '@/lib/schemas'
 import Card from '@/components/ui/Card'
 import Input from '@/components/ui/Input'
 import SearchableSelect from '@/components/ui/SearchableSelect'
@@ -11,6 +14,7 @@ import Button from '@/components/ui/Button'
 import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import RoleGuard from '@/components/auth/RoleGuard'
+import Breadcrumbs from '@/components/ui/Breadcrumbs'
 
 export default function NouvelAssurePage() {
   return (
@@ -22,114 +26,115 @@ export default function NouvelAssurePage() {
 
 function NouvelAssureForm() {
   const router = useRouter()
-  const [form, setForm] = useState({
-    nom: '',
-    prenom: '',
-    email: '',
-    dateNaissance: '',
-    sexe: 'M',
-    numCompteBancaire: '',
-    numMedecinTraitant: '',
+
+  const { control, register, handleSubmit, formState: { errors, isSubmitting } } = useForm<AssureFormData>({
+    resolver: zodResolver(assureSchema),
+    defaultValues: {
+      nom: '',
+      prenom: '',
+      email: '',
+      dateNaissance: '',
+      sexe: 'M',
+      numCompteBancaire: '',
+      numMedecinTraitant: undefined as any,
+    },
   })
-  const [error, setError] = useState('')
 
   const generalistes = medecins
     .filter(m => m.typeMedecin === 'GENERALISTE' && m.actif)
     .map(m => ({ value: String(m.numMedecin), label: `Dr. ${m.prenom} ${m.nom}` }))
 
-  const handleSubmit = (e: FormEvent) => {
-    e.preventDefault()
-    if (!form.numMedecinTraitant) {
-      setError('Veuillez sélectionner un médecin traitant')
-      return
-    }
-    setError('')
-    console.log('Nouvel assuré:', form)
+  const onSubmit = (data: AssureFormData) => {
+    console.log('Nouvel assuré:', data)
     router.push('/assures')
-  }
-
-  const update = (field: string, value: string) => {
-    setForm(prev => ({ ...prev, [field]: value }))
   }
 
   return (
     <div>
       <div className="flex items-center gap-4 mb-6">
-        <Link href="/assures" className="text-text-anthracite/40 hover:text-prune-main transition-colors">
+        <Link href="/assures" className="text-text-anthracite/60 hover:text-prune-main transition-colors">
           <ArrowLeft size={20} />
         </Link>
+        <Breadcrumbs items={[{ label: 'Accueil', href: '/' }, { label: 'Assurés', href: '/assures' }, { label: 'Nouvel assuré' }]} />
         <div>
-          <h1 className="text-xl font-semibold text-prune-main mb-1">Nouvel assuré</h1>
-          <p className="text-sm text-text-anthracite/50">Inscription d&apos;une personne à la sécurité sociale</p>
+          <h1 className="text-2xl md:text-3xl font-semibold text-prune-main mb-1">Nouvel assuré</h1>
+          <p className="text-sm text-text-anthracite/60">Inscription d&apos;une personne à la sécurité sociale</p>
         </div>
       </div>
 
-      <Card className="max-w-2xl">
-        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-          <div className="grid grid-cols-2 gap-4">
+      <Card className="w-full lg:max-w-2xl">
+        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
               label="Nom"
-              value={form.nom}
-              onChange={e => update('nom', e.target.value)}
+              {...register('nom')}
+              error={errors.nom?.message}
               required
-              placeholder="Dupont"
+              placeholder="Biya"
             />
             <Input
               label="Prénom"
-              value={form.prenom}
-              onChange={e => update('prenom', e.target.value)}
+              {...register('prenom')}
+              error={errors.prenom?.message}
               required
-              placeholder="Jean"
+              placeholder="Paul"
             />
           </div>
 
           <Input
             label="Email"
             type="email"
-            value={form.email}
-            onChange={e => update('email', e.target.value)}
-            placeholder="jean.dupont@email.fr"
+            {...register('email')}
+            placeholder="paulbiya@gmail.com"
           />
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
               label="Date de naissance"
               type="date"
-              value={form.dateNaissance}
-              onChange={e => update('dateNaissance', e.target.value)}
+              {...register('dateNaissance')}
+              error={errors.dateNaissance?.message}
               required
             />
-            <RadioGroup
-              label="Sexe"
+            <Controller
               name="sexe"
-              options={[{ value: 'M', label: 'Masculin' }, { value: 'F', label: 'Féminin' }]}
-              value={form.sexe}
-              onChange={v => update('sexe', v)}
+              control={control}
+              render={({ field }) => (
+                <RadioGroup
+                  label="Sexe"
+                  name="sexe"
+                  options={[{ value: 'M', label: 'Masculin' }, { value: 'F', label: 'Féminin' }]}
+                  value={field.value}
+                  onChange={field.onChange}
+                />
+              )}
             />
           </div>
 
           <Input
             label="Numéro de compte bancaire (IBAN)"
-            value={form.numCompteBancaire}
-            onChange={e => update('numCompteBancaire', e.target.value)}
-            placeholder="FR76 XXXX XXXX XXXX XXXX XXXX XXX"
+            {...register('numCompteBancaire')}
+            placeholder="CM21 XXXX XXXX XXXX XXXX XXXX XXX"
           />
 
-          <SearchableSelect
-            label="Médecin traitant *"
-            options={generalistes}
-            placeholder="Sélectionner un généraliste"
-            value={form.numMedecinTraitant}
-            onChange={v => { setError(''); update('numMedecinTraitant', v) }}
-            required
+          <Controller
+            name="numMedecinTraitant"
+            control={control}
+            render={({ field }) => (
+              <SearchableSelect
+                label="Médecin traitant *"
+                options={generalistes}
+                placeholder="Sélectionner un généraliste"
+                value={field.value ? String(field.value) : ''}
+                onChange={v => field.onChange(v ? Number(v) : undefined)}
+                error={errors.numMedecinTraitant?.message}
+                required
+              />
+            )}
           />
-
-          {error && (
-            <p className="text-xs text-alert-red -mt-3">{error}</p>
-          )}
 
           <div className="flex gap-3 pt-2">
-            <Button type="submit">Inscrire l&apos;assuré</Button>
+            <Button type="submit" loading={isSubmitting}>Inscrire l&apos;assuré</Button>
             <Link href="/assures">
               <Button type="button" variant="secondary">Annuler</Button>
             </Link>

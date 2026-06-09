@@ -1,24 +1,29 @@
 'use client'
 
-import { useState, FormEvent } from 'react'
+import { useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { useAuth } from '@/hooks/useAuth'
+import { useKeyboard } from '@/hooks/useKeyboard'
 import { useRouter } from 'next/navigation'
 import { Eye, EyeOff } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
+import { loginSchema, type LoginFormData } from '@/lib/schemas'
 
 export default function LoginForm() {
-  const [loginValue, setLoginValue] = useState('')
-  const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const { login } = useAuth()
   const router = useRouter()
 
-  const handleSubmit = (e: FormEvent) => {
-    e.preventDefault()
+  const { register, handleSubmit, formState: { errors } } = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
+  })
+
+  const onSubmit = (data: LoginFormData) => {
     setError('')
-    const success = login(loginValue, password)
+    const success = login(data.login, data.motDePasse)
     if (success) {
       router.push('/')
     } else {
@@ -27,7 +32,7 @@ export default function LoginForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-5">
       <div className="text-center mb-2">
         <div className="inline-flex items-center justify-center w-14 h-14 border border-sable-gold/40 mb-4">
           <span className="text-2xl font-bold text-prune-main">OSS</span>
@@ -38,24 +43,24 @@ export default function LoginForm() {
       <Input
         label="Identifiant"
         type="text"
-        value={loginValue}
-        onChange={e => setLoginValue(e.target.value)}
+        {...register('login')}
         placeholder="admin, drmbarga, drndongo"
+        error={errors.login?.message}
         required
       />
 
       <Input
         label="Mot de passe"
         type={showPassword ? 'text' : 'password'}
-        value={password}
-        onChange={e => setPassword(e.target.value)}
+        {...register('motDePasse')}
         placeholder="••••••••"
+        error={errors.motDePasse?.message}
         required
         rightElement={
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
-            className="text-text-anthracite/40 hover:text-prune-main transition-colors"
+            className="text-text-anthracite/60 hover:text-prune-main transition-colors"
             tabIndex={-1}
           >
             {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -71,7 +76,7 @@ export default function LoginForm() {
         Se connecter
       </Button>
 
-      <p className="text-xs text-text-anthracite/40 text-center">
+      <p className="text-xs text-text-anthracite/60 text-center">
         Identifiants de démo : admin / drmbarga / drndongo
       </p>
     </form>

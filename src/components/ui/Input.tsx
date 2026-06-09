@@ -1,6 +1,6 @@
 'use client'
 
-import { InputHTMLAttributes, ReactNode } from 'react'
+import { InputHTMLAttributes, ReactNode, useId } from 'react'
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string
@@ -8,18 +8,21 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   rightElement?: ReactNode
 }
 
-export default function Input({ label, error, rightElement, className = '', ...props }: InputProps) {
+export default function Input({ label, error, rightElement, className = '', id, ...props }: InputProps) {
+  const genId = useId()
+  const inputId = id || genId
   return (
     <div className="flex flex-col gap-1">
       {label && (
-        <label className="text-xs font-medium uppercase tracking-wider text-text-anthracite/60">
+        <label htmlFor={inputId} className="text-xs font-medium uppercase tracking-wider text-text-anthracite/60">
           {label}
         </label>
       )}
       <div className="relative">
         <input
-          className={`w-full border border-text-anthracite/15 bg-white-pure px-3 py-2 text-sm text-text-anthracite placeholder:text-text-anthracite/30 focus:outline-none focus:border-prune-main transition-colors ${
-            error ? 'border-alert-red' : ''
+          id={inputId}
+          className={`w-full border bg-white-pure px-3 py-2 text-sm text-text-anthracite placeholder:text-text-anthracite/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-prune-main/40 focus-visible:border-prune-main transition-colors ${
+            error ? 'border-alert-red' : 'border-text-anthracite/15'
           } ${rightElement ? 'pr-10' : ''} ${className}`}
           {...props}
         />

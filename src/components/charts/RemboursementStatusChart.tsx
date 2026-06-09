@@ -22,7 +22,7 @@ export default function RemboursementStatusChart({ feuilles }: { feuilles: Feuil
 
     for (const f of feuilles) {
       for (const r of f.remboursements) {
-        if (r.statut === 'REJETEE') continue
+
         const label = LABELS[r.statut] ?? r.statut
         statusTotals.set(label, (statusTotals.get(label) ?? 0) + 1)
       }

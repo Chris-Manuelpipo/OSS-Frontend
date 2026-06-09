@@ -2,10 +2,12 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
-  LayoutDashboard, Users, Stethoscope, FileText, LogOut, User
+  LayoutDashboard, Users, Stethoscope, FileText, LogOut, User, X
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
+import { useFocusTrap } from '@/hooks/useFocusTrap'
 import ThemeToggle from '@/components/ui/ThemeToggle'
 import { medecins } from '@/data/mock'
 
@@ -22,13 +24,20 @@ const medecinNav = [
   { href: '/assures', label: 'Mes patients', icon: Users },
 ]
 
-export default function Sidebar() {
+interface SidebarProps {
+  open: boolean
+  onClose: () => void
+}
+
+export default function Sidebar({ open, onClose }: SidebarProps) {
   const pathname = usePathname()
   const { user, logout } = useAuth()
+  const nav = user?.role === 'MEDECIN' ? medecinNav : agentNav
+  const drawerRef = useFocusTrap(open)
 
-  return (
-    <aside className="fixed top-0 left-0 w-60 h-full bg-prune-main flex flex-col z-50">
-      <div className="p-6 border-b border-white/10">
+  const sidebar = (
+    <aside className="h-full bg-prune-main flex flex-col">
+      <div className="p-6 border-b border-white/10 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 border border-sable-gold/50 flex items-center justify-center">
             <span className="text-sm font-bold text-sable-gold">OSS</span>
@@ -38,16 +47,25 @@ export default function Sidebar() {
             <p className="text-[10px] text-prune-light/50 uppercase tracking-wider">Gestion</p>
           </div>
         </div>
+        <button
+          onClick={onClose}
+          className="md:hidden text-prune-light/50 hover:text-prune-light transition-colors"
+          aria-label="Fermer le menu"
+        >
+          <X size={20} />
+        </button>
       </div>
 
-      <nav className="flex-1 py-4">
-        {(user?.role === 'MEDECIN' ? medecinNav : agentNav).map(item => {
+      <nav className="flex-1 py-4 overflow-y-auto">
+        {nav.map(item => {
           const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
           const Icon = item.icon
           return (
             <Link
               key={item.href}
               href={item.href}
+              onClick={onClose}
+              aria-current={isActive ? 'page' : undefined}
               className={`flex items-center gap-3 px-6 py-3 text-sm transition-colors relative ${
                 isActive
                   ? 'text-prune-light bg-white/5'
@@ -68,9 +86,10 @@ export default function Sidebar() {
         {user?.role === 'MEDECIN' ? (
           <Link
             href={`/medecins/${medecins.find(m => m.login === user.login)?.numMedecin}`}
+            onClick={onClose}
             className="flex items-center gap-3 px-2 py-2 hover:bg-white/5 transition-colors rounded"
           >
-            <div className="w-8 h-8 rounded-full bg-prune-sec/30 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-full bg-prune-sec/30 flex items-center justify-center flex-shrink-0">
               <User size={14} className="text-prune-light/70" />
             </div>
             <div className="flex-1 min-w-0">
@@ -82,7 +101,7 @@ export default function Sidebar() {
           </Link>
         ) : (
           <div className="flex items-center gap-3 px-2 py-2">
-            <div className="w-8 h-8 rounded-full bg-prune-sec/30 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-full bg-prune-sec/30 flex items-center justify-center flex-shrink-0">
               <User size={14} className="text-prune-light/70" />
             </div>
             <div className="flex-1 min-w-0">
@@ -103,5 +122,41 @@ export default function Sidebar() {
         </button>
       </div>
     </aside>
+  )
+
+  return (
+    <>
+      {/* Desktop — always visible */}
+      <div className="hidden md:fixed md:inset-y-0 md:left-0 md:w-60 md:flex md:flex-col md:z-50">
+        {sidebar}
+      </div>
+
+      {/* Mobile — overlay drawer */}
+      <AnimatePresence>
+        {open && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 z-40 bg-black/40 md:hidden"
+              onClick={onClose}
+              aria-hidden="true"
+            />
+            <motion.div
+              ref={drawerRef}
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+              className="fixed inset-y-0 left-0 z-50 w-60 md:hidden"
+            >
+              {sidebar}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </>
   )
 }

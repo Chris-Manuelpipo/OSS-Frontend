@@ -7,27 +7,31 @@ import Badge from '@/components/ui/Badge'
 import StatusBadge from '@/components/ui/StatusBadge'
 import DataTable from '@/components/ui/DataTable'
 import Button from '@/components/ui/Button'
-import { ArrowLeft, Mail, Calendar, User, CreditCard, Stethoscope, FileText, FilePlus, Euro, Trash2 } from 'lucide-react'
+import { ArrowLeft, Mail, Calendar, User, CreditCard, Stethoscope, FileText, FilePlus, Banknote, Trash2 } from 'lucide-react'
+import EmptyState from '@/components/ui/EmptyState'
+import Breadcrumbs from '@/components/ui/Breadcrumbs'
 import Link from 'next/link'
 import { formatCurrency, formatDateShort } from '@/lib/utils'
 import { FeuilleMaladie } from '@/lib/types'
 import { useAuth } from '@/hooks/useAuth'
+import { useConfirm } from '@/hooks/useConfirm'
+import { useToast } from '@/components/ui/Toast'
 import { useRouter } from 'next/navigation'
 
 export default function AssureDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const { user } = useAuth()
+  const { confirm: ask, dialog: confirmDialog } = useConfirm()
+  const toast = useToast()
   const router = useRouter()
   const assure = assures.find(a => a.numAssure === Number(id))
 
   if (!assure) {
     return (
       <div>
-        <Link href="/assures" className="inline-flex items-center gap-1 text-sm text-text-anthracite/50 hover:text-prune-main mb-4 transition-colors">
-          <ArrowLeft size={16} /> Retour aux assurés
-        </Link>
+        <Breadcrumbs items={[{ label: 'Accueil', href: '/' }, { label: 'Assurés', href: '/assures' }]} />
         <Card>
-          <p className="text-text-anthracite/50 text-center py-8">Assuré introuvable</p>
+          <p className="text-text-anthracite/60 text-center py-8">Assuré introuvable</p>
         </Card>
       </div>
     )
@@ -47,7 +51,7 @@ export default function AssureDetailPage({ params }: { params: Promise<{ id: str
       key: 'numFeuille',
       header: 'N°',
       render: (f: FeuilleMaladie) => (
-        <span className="font-mono text-xs text-text-anthracite/40">#{f.numFeuille}</span>
+        <span className="font-mono text-xs text-text-anthracite/60">#{f.numFeuille}</span>
       ),
     },
     {
@@ -85,9 +89,8 @@ export default function AssureDetailPage({ params }: { params: Promise<{ id: str
       header: 'Statut',
       render: (f: FeuilleMaladie) => {
         const tousEffectues = f.remboursements.every(r => r.statut === 'EFFECTUE')
-        const aUnRejete = f.remboursements.some(r => r.statut === 'REJETEE')
         return (
-          <StatusBadge statut={tousEffectues ? 'EFFECTUE' : aUnRejete ? 'REJETEE' : 'EN_ATTENTE'} />
+          <StatusBadge statut={tousEffectues ? 'EFFECTUE' : 'EN_ATTENTE'} />
         )
       },
     },
@@ -104,14 +107,12 @@ export default function AssureDetailPage({ params }: { params: Promise<{ id: str
 
   return (
     <div>
-      <Link href="/assures" className="inline-flex items-center gap-1 text-sm text-text-anthracite/50 hover:text-prune-main mb-4 transition-colors">
-        <ArrowLeft size={16} /> Retour aux assurés
-      </Link>
+      <Breadcrumbs items={[{ label: 'Accueil', href: '/' }, { label: 'Assurés', href: '/assures' }, { label: `${assure.prenom} ${assure.nom}` }]} />
 
       <div className="flex items-start justify-between mb-6">
         <div>
-          <h1 className="text-xl font-semibold text-prune-main mb-1">{assure.prenom} {assure.nom}</h1>
-          <p className="text-sm text-text-anthracite/50">Assuré n°{assure.numAssure}</p>
+          <h1 className="text-2xl md:text-3xl font-semibold text-prune-main mb-1 break-words">{assure.prenom} {assure.nom}</h1>
+          <p className="text-sm text-text-anthracite/60">Assuré n°{assure.numAssure}</p>
         </div>
         <div className="flex items-center gap-2">
           <Badge variant={assure.sexe === 'M' ? 'prune' : 'gold'}>
@@ -119,8 +120,10 @@ export default function AssureDetailPage({ params }: { params: Promise<{ id: str
           </Badge>
           {user?.role === 'AGENT_OSS' && (
             <button
-              onClick={() => {
-                if (window.confirm(`Supprimer l'assuré ${assure.prenom} ${assure.nom} ? Cette action est irréversible.`)) {
+              onClick={async () => {
+                const ok = await ask(`Êtes-vous sûr de vouloir supprimer l'assuré ${assure.prenom} ${assure.nom} ? Cette action est irréversible.`)
+                if (ok) {
+                  toast.show(`${assure.prenom} ${assure.nom} a été supprimé`, 'success')
                   router.push('/assures')
                 }
               }}
@@ -133,33 +136,33 @@ export default function AssureDetailPage({ params }: { params: Promise<{ id: str
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 mb-6">
         <Card className="lg:col-span-2">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-text-anthracite/50 mb-4">Informations personnelles</h2>
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-text-anthracite/60 mb-4">Informations personnelles</h2>
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div className="flex items-center gap-2">
-              <User size={14} className="text-text-anthracite/30" />
-              <span className="text-text-anthracite/50">Nom</span>
+              <User size={14} className="text-text-anthracite/45" />
+              <span className="text-text-anthracite/60">Nom</span>
               <span className="ml-auto font-medium text-prune-main">{assure.nom}</span>
             </div>
             <div className="flex items-center gap-2">
-              <User size={14} className="text-text-anthracite/30" />
-              <span className="text-text-anthracite/50">Prénom</span>
+              <User size={14} className="text-text-anthracite/45" />
+              <span className="text-text-anthracite/60">Prénom</span>
               <span className="ml-auto font-medium text-prune-main">{assure.prenom}</span>
             </div>
             <div className="flex items-center gap-2">
-              <Calendar size={14} className="text-text-anthracite/30" />
-              <span className="text-text-anthracite/50">Date naissance</span>
+              <Calendar size={14} className="text-text-anthracite/45" />
+              <span className="text-text-anthracite/60">Date naissance</span>
               <span className="ml-auto font-medium">{formatDateShort(assure.dateNaissance)}</span>
             </div>
             <div className="flex items-center gap-2">
-              <Mail size={14} className="text-text-anthracite/30" />
-              <span className="text-text-anthracite/50">Email</span>
+              <Mail size={14} className="text-text-anthracite/45" />
+              <span className="text-text-anthracite/60">Email</span>
               <span className="ml-auto font-medium">{assure.email || '—'}</span>
             </div>
             <div className="flex items-center gap-2 col-span-2">
-              <CreditCard size={14} className="text-text-anthracite/30" />
-              <span className="text-text-anthracite/50">IBAN</span>
+              <CreditCard size={14} className="text-text-anthracite/45" />
+              <span className="text-text-anthracite/60">IBAN</span>
               <span className="ml-auto font-mono text-xs">{assure.numCompteBancaire || '—'}</span>
             </div>
           </div>
@@ -168,8 +171,8 @@ export default function AssureDetailPage({ params }: { params: Promise<{ id: str
         <div className="flex flex-col gap-3">
           <Card className="!p-4 flex-1">
             <div className="flex items-center gap-2 mb-2">
-              <Stethoscope size={14} className="text-prune-sec/40" />
-              <span className="text-xs font-medium uppercase tracking-wider text-text-anthracite/50">Médecin traitant</span>
+              <Stethoscope size={14} className="text-prune-sec/60" />
+              <span className="text-xs font-medium uppercase tracking-wider text-text-anthracite/60">Médecin traitant</span>
             </div>
             <p className="text-sm font-medium text-prune-main">
               {assure.nomMedecinTraitant || 'Non attribué'}
@@ -177,15 +180,15 @@ export default function AssureDetailPage({ params }: { params: Promise<{ id: str
           </Card>
           <Card className="!p-4 flex-1">
             <div className="flex items-center gap-2 mb-2">
-              <FileText size={14} className="text-prune-sec/40" />
-              <span className="text-xs font-medium uppercase tracking-wider text-text-anthracite/50">Feuilles</span>
+              <FileText size={14} className="text-prune-sec/60" />
+              <span className="text-xs font-medium uppercase tracking-wider text-text-anthracite/60">Feuilles</span>
             </div>
             <p className="text-lg font-semibold text-prune-main">{feuilles.length}</p>
           </Card>
           <Card className="!p-4 flex-1">
             <div className="flex items-center gap-2 mb-2">
-              <Euro size={14} className="text-success-green/40" />
-              <span className="text-xs font-medium uppercase tracking-wider text-text-anthracite/50">Remboursé</span>
+              <Banknote size={14} className="text-success-green/40" />
+              <span className="text-xs font-medium uppercase tracking-wider text-text-anthracite/60">Remboursé</span>
             </div>
             <p className="text-lg font-semibold text-success-green">{formatCurrency(totalRembourse)}</p>
             {totalAttente > 0 && (
@@ -197,7 +200,7 @@ export default function AssureDetailPage({ params }: { params: Promise<{ id: str
 
       <Card>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-text-anthracite/50">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-text-anthracite/60">
             Historique des feuilles de maladie
           </h2>
           {user?.role === 'MEDECIN' && (
@@ -211,9 +214,10 @@ export default function AssureDetailPage({ params }: { params: Promise<{ id: str
         </div>
         <DataTable columns={columns} data={feuilles} />
         {feuilles.length === 0 && (
-          <p className="text-center py-8 text-sm text-text-anthracite/40">Aucune feuille de maladie</p>
+          <EmptyState icon={<FileText size={28} />} title="Aucune feuille de maladie" />
         )}
       </Card>
+      {confirmDialog}
     </div>
   )
 }

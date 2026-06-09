@@ -1,7 +1,11 @@
 'use client'
 
-import { useState, useEffect, FormEvent } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useForm, Controller } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { useKeyboard } from '@/hooks/useKeyboard'
+import { medecinSchema, type MedecinFormData } from '@/lib/schemas'
 import Card from '@/components/ui/Card'
 import Input from '@/components/ui/Input'
 import SearchableSelect from '@/components/ui/SearchableSelect'
@@ -10,6 +14,7 @@ import Button from '@/components/ui/Button'
 import { ArrowLeft, CheckCircle } from 'lucide-react'
 import Link from 'next/link'
 import RoleGuard from '@/components/auth/RoleGuard'
+import Breadcrumbs from '@/components/ui/Breadcrumbs'
 import { ajouterUtilisateur } from '@/data/mock'
 
 export default function NouveauMedecinPage() {
@@ -22,7 +27,6 @@ export default function NouveauMedecinPage() {
 
 const FORMATIONS = [
   'Médecine générale - Université de Yaoundé I',
-  'Médecine générale - Université de Yaoundé II',
   'Médecine générale - Université de Douala',
   'Médecine générale - Université de Buéa',
   'Médecine générale - Université de Dschang',
@@ -31,15 +35,15 @@ const FORMATIONS = [
   'Médecine générale - Université de Bamenda',
   'Médecine générale - Université de Garoua',
   'Médecine générale - Université des Montagnes (Bangangté)',
-  'Médecine générale - Université Catholique d\'Afrique Centrale (Yaoundé)',
-  'Médecine générale - Institut Supérieur des Sciences de la Santé (Ngaoundéré)',
-  'Médecine générale - Faculté de Médecine de l\'Université de Yaoundé I',
-  'Médecine générale - Faculté de Médecine de l\'Université de Douala',
-  'Médecine générale - Faculté de Médecine de l\'Université de Buéa',
+  "Médecine générale - Université Catholique d'Afrique Centrale (Yaoundé)",
+  "Médecine générale - Institut Supérieur des Sciences de la Santé (Ngaoundéré)",
+  "Médecine générale - Faculté de Médecine de l'Université de Yaoundé I",
+  "Médecine générale - Faculté de Médecine de l'Université de Douala",
+  "Médecine générale - Faculté de Médecine de l'Université de Buéa",
   'Médecine générale - Faculté des Sciences de la Santé de Bamenda',
   'Médecine générale - Université de Bertoua',
   'Médecine générale - Université de Kribi',
-  'Médecine générale - Université d\'Ebolowa',
+  "Médecine générale - Université d'Ebolowa",
   'Médecine générale - Université de Sangmélima',
 ]
 
@@ -49,7 +53,7 @@ const SPECIALITES = [
   'Ophtalmologie',
   'Gynécologie-obstétrique',
   'Pédiatrie',
-  'Médecine d\'urgence',
+  "Médecine d'urgence",
   'Neurologie',
   'Psychiatrie',
   'Radiologie',
@@ -89,70 +93,72 @@ const SPECIALITES = [
 
 function NouveauMedecinForm() {
   const router = useRouter()
-  const [form, setForm] = useState({
-    nom: '',
-    prenom: '',
-    email: '',
-    dateNaissance: '',
-    sexe: 'M',
-    login: '',
-    typeMedecin: 'GENERALISTE',
-    typeFormation: '',
-    nomSpecialite: '',
-  })
-
   const [added, setAdded] = useState(false)
   const DEFAULT_MDP = 'med@2026'
 
-  useEffect(() => {
-    const trimmed = form.prenom.trim().toLowerCase().replace(/\s+/g, '')
-    if (trimmed) {
-      update('login', `dr${trimmed}`)
-    }
-  }, [form.prenom])
+  const { control, register, handleSubmit, setValue, watch, formState: { errors } } = useForm<MedecinFormData>({
+    resolver: zodResolver(medecinSchema),
+    defaultValues: {
+      nom: '',
+      prenom: '',
+      email: '',
+      dateNaissance: '',
+      sexe: 'M',
+      login: '',
+      typeMedecin: 'GENERALISTE',
+      typeFormation: '',
+      nomSpecialite: '',
+    },
+  })
 
-  const handleSubmit = (e: FormEvent) => {
-    e.preventDefault()
+  const prenom = watch('prenom')
+  const typeMedecin = watch('typeMedecin')
+
+  useEffect(() => {
+    const trimmed = prenom.trim().toLowerCase().replace(/\s+/g, '')
+    if (trimmed) {
+      setValue('login', `dr${trimmed}`)
+    }
+  }, [prenom, setValue])
+
+  const onSubmit = (data: MedecinFormData) => {
     ajouterUtilisateur({
-      login: form.login,
-      nom: form.nom,
-      prenom: form.prenom,
+      login: data.login,
+      nom: data.nom,
+      prenom: data.prenom,
       role: 'MEDECIN',
       motDePasse: DEFAULT_MDP,
     })
     setAdded(true)
   }
 
-  const update = (field: string, value: string) => {
-    setForm(prev => ({ ...prev, [field]: value }))
-  }
-
   if (added) {
     return (
       <div>
         <div className="flex items-center gap-4 mb-6">
-          <Link href="/medecins" className="text-text-anthracite/40 hover:text-prune-main transition-colors">
+          <Link href="/medecins" className="text-text-anthracite/60 hover:text-prune-main transition-colors">
             <ArrowLeft size={20} />
           </Link>
+          <Breadcrumbs items={[{ label: 'Accueil', href: '/' }, { label: 'Médecins', href: '/medecins' }, { label: 'Nouveau médecin' }]} />
           <div>
-            <h1 className="text-xl font-semibold text-prune-main mb-1">Médecin ajouté</h1>
-            <p className="text-sm text-text-anthracite/50">Le compte a été créé avec succès</p>
+            <h1 className="text-2xl md:text-3xl font-semibold text-prune-main mb-1">Médecin ajouté</h1>
+            <p className="text-sm text-text-anthracite/60">Le compte a été créé avec succès</p>
           </div>
         </div>
 
-        <Card className="max-w-2xl">
+        <Card className="w-full lg:max-w-2xl">
           <div className="flex flex-col items-center gap-4 py-6">
             <CheckCircle size={48} className="text-success-green" />
             <p className="text-lg font-medium text-prune-main">
-              {form.prenom} {form.nom}
+              {watch('prenom')} {watch('nom')}
             </p>
             <p className="text-sm text-text-anthracite/70">
-              Identifiant : <span className="font-mono font-semibold text-prune-main">{form.login}</span>
+              Identifiant : <span className="font-mono font-semibold text-prune-main">{watch('login')}</span>
             </p>
             <p className="text-sm text-text-anthracite/70">
               Mot de passe par défaut : <span className="font-mono font-semibold text-prune-main">{DEFAULT_MDP}</span>
             </p>
-            <p className="text-xs text-text-anthracite/40 text-center max-w-sm">
+            <p className="text-xs text-text-anthracite/60 text-center max-w-sm">
               Le médecin pourra changer son mot de passe depuis son profil.
             </p>
             <Link href="/medecins">
@@ -167,29 +173,30 @@ function NouveauMedecinForm() {
   return (
     <div>
       <div className="flex items-center gap-4 mb-6">
-        <Link href="/medecins" className="text-text-anthracite/40 hover:text-prune-main transition-colors">
-          <ArrowLeft size={20} />
-        </Link>
-        <div>
-          <h1 className="text-xl font-semibold text-prune-main mb-1">Nouveau médecin</h1>
-          <p className="text-sm text-text-anthracite/50">Ajout d&apos;un praticien au registre</p>
+          <Link href="/medecins" className="text-text-anthracite/60 hover:text-prune-main transition-colors">
+            <ArrowLeft size={20} />
+          </Link>
+          <Breadcrumbs items={[{ label: 'Accueil', href: '/' }, { label: 'Médecins', href: '/medecins' }, { label: 'Nouveau médecin' }]} />
+          <div>
+            <h1 className="text-2xl md:text-3xl font-semibold text-prune-main mb-1">Nouveau médecin</h1>
+            <p className="text-sm text-text-anthracite/60">Inscrire un nouveau médecin</p>
+          </div>
         </div>
-      </div>
 
-      <Card className="max-w-2xl">
-        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-          <div className="grid grid-cols-2 gap-4">
+        <Card className="w-full lg:max-w-2xl">
+          <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
               label="Nom"
-              value={form.nom}
-              onChange={e => update('nom', e.target.value)}
+              {...register('nom')}
+              error={errors.nom?.message}
               required
               placeholder="ETCHOME"
             />
             <Input
               label="Prénom"
-              value={form.prenom}
-              onChange={e => update('prenom', e.target.value)}
+              {...register('prenom')}
+              error={errors.prenom?.message}
               required
               placeholder="Chris"
             />
@@ -198,32 +205,37 @@ function NouveauMedecinForm() {
           <Input
             label="Email"
             type="email"
-            value={form.email}
-            onChange={e => update('email', e.target.value)}
+            {...register('email')}
             placeholder="etchomechris2000@gmail.com"
           />
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
               label="Date de naissance"
               type="date"
-              value={form.dateNaissance}
-              onChange={e => update('dateNaissance', e.target.value)}
+              {...register('dateNaissance')}
+              error={errors.dateNaissance?.message}
               required
             />
-            <RadioGroup
-              label="Sexe"
+            <Controller
               name="sexe"
-              options={[{ value: 'M', label: 'Masculin' }, { value: 'F', label: 'Féminin' }]}
-              value={form.sexe}
-              onChange={v => update('sexe', v)}
+              control={control}
+              render={({ field }) => (
+                <RadioGroup
+                  label="Sexe"
+                  name="sexe"
+                  options={[{ value: 'M', label: 'Masculin' }, { value: 'F', label: 'Féminin' }]}
+                  value={field.value}
+                  onChange={field.onChange}
+                />
+              )}
             />
           </div>
 
           <Input
             label="Identifiant de connexion"
-            value={form.login}
-            onChange={e => update('login', e.target.value)}
+            {...register('login')}
+            error={errors.login?.message}
             required
             placeholder="drchris"
           />
@@ -232,34 +244,53 @@ function NouveauMedecinForm() {
             Mot de passe par défaut : <span className="font-mono font-semibold">{DEFAULT_MDP}</span>
           </div>
 
-          <SearchableSelect
-            label="Type de médecin"
-            options={[
-              { value: 'GENERALISTE', label: 'Généraliste' },
-              { value: 'SPECIALISTE', label: 'Spécialiste' },
-            ]}
-            value={form.typeMedecin}
-            onChange={v => update('typeMedecin', v)}
+          <Controller
+            name="typeMedecin"
+            control={control}
+            render={({ field }) => (
+              <SearchableSelect
+                label="Type de médecin"
+                options={[
+                  { value: 'GENERALISTE', label: 'Généraliste' },
+                  { value: 'SPECIALISTE', label: 'Spécialiste' },
+                ]}
+                value={field.value}
+                onChange={field.onChange}
+              />
+            )}
           />
 
-          {form.typeMedecin === 'GENERALISTE' ? (
-            <SearchableSelect
-              label="Formation"
-              options={FORMATIONS.map(f => ({ value: f, label: f }))}
-              value={form.typeFormation}
-              onChange={v => update('typeFormation', v)}
-              placeholder="Rechercher ou saisir une formation..."
-              creatable
+          {typeMedecin === 'GENERALISTE' ? (
+            <Controller
+              name="typeFormation"
+              control={control}
+              render={({ field }) => (
+                <SearchableSelect
+                  label="Formation"
+                  options={FORMATIONS.map(f => ({ value: f, label: f }))}
+                  value={field.value ?? ''}
+                  onChange={field.onChange}
+                  placeholder="Rechercher ou saisir une formation..."
+                  creatable
+                />
+              )}
             />
           ) : (
-            <SearchableSelect
-              label="Spécialité"
-              options={SPECIALITES.map(s => ({ value: s, label: s }))}
-              value={form.nomSpecialite}
-              onChange={v => update('nomSpecialite', v)}
-              placeholder="Rechercher ou saisir une spécialité..."
-              required
-              creatable
+            <Controller
+              name="nomSpecialite"
+              control={control}
+              render={({ field }) => (
+                <SearchableSelect
+                  label="Spécialité"
+                  options={SPECIALITES.map(s => ({ value: s, label: s }))}
+                  value={field.value ?? ''}
+                  onChange={field.onChange}
+                  error={errors.nomSpecialite?.message}
+                  placeholder="Rechercher ou saisir une spécialité..."
+                  required
+                  creatable
+                />
+              )}
             />
           )}
 

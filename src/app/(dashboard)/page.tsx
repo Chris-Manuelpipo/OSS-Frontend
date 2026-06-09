@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { Banknote, Users, FileWarning, Activity, ArrowRight, Calendar, FilePlus, Plus, Play } from 'lucide-react'
+import EmptyState from '@/components/ui/EmptyState'
 import StatCard from '@/components/ui/StatCard'
 import Card from '@/components/ui/Card'
 import MonthlyChart from '@/components/charts/MonthlyChart'
@@ -65,13 +66,13 @@ export default function DashboardPage() {
       <div>
         <div className="flex items-start justify-between mb-1">
           <div>
-            <h1 className="text-xl font-semibold text-prune-main">
+            <h1 className="text-2xl md:text-3xl font-semibold text-prune-main break-words">
               Bonjour{' '}
               <Link href={`/medecins/${medecin?.numMedecin}`} className="hover:text-prune-sec transition-colors">
                 Dr. {user.prenom}
               </Link>
             </h1>
-            <p className="text-sm text-text-anthracite/50">
+            <p className="text-sm text-text-anthracite/60">
               {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
             </p>
             {aujourdhuiCount > 0 && (
@@ -112,7 +113,7 @@ export default function DashboardPage() {
           />
         </div>
 
-        <Card className="max-w-2xl">
+        <Card className="w-full lg:max-w-2xl">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-semibold text-prune-main uppercase tracking-wider">
               Mes dernières consultations
@@ -130,13 +131,13 @@ export default function DashboardPage() {
                 <p className="flex-1 text-sm text-text-anthracite group-hover:text-prune-main transition-colors">
                   {c.nomAssure} — <span className="text-text-anthracite/60">{c.motif}</span>
                 </p>
-                <span className="text-xs text-text-anthracite/40 whitespace-nowrap">
+                <span className="text-xs text-text-anthracite/60 whitespace-nowrap">
                   {formatDateShort(c.dateConsultation)}
                 </span>
               </Link>
             ))}
             {mesConsultations.length === 0 && (
-              <p className="text-center py-6 text-sm text-text-anthracite/40">Aucune consultation</p>
+              <EmptyState title="Aucune consultation" />
             )}
           </div>
         </Card>
@@ -148,8 +149,8 @@ export default function DashboardPage() {
     <div>
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h1 className="text-xl font-semibold text-prune-main mb-1">Tableau de bord</h1>
-          <p className="text-sm text-text-anthracite/50">
+          <h1 className="text-2xl md:text-3xl font-semibold text-prune-main mb-1">Tableau de bord</h1>
+          <p className="text-sm text-text-anthracite/60">
             {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
           </p>
         </div>
@@ -167,8 +168,8 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="flex items-center gap-3 mb-6">
-        <span className="text-xs font-medium uppercase tracking-wider text-text-anthracite/50">Période</span>
+      <div className="flex items-center gap-3 mb-6 overflow-x-auto">
+        <span className="text-xs font-medium uppercase tracking-wider text-text-anthracite/60 whitespace-nowrap">Période</span>
         <div className="flex bg-white-pure border border-text-anthracite/5 text-sm">
           {periods.map(p => (
             <button
@@ -224,18 +225,18 @@ export default function DashboardPage() {
               <span className="w-2 h-2 rounded-full bg-alert-red" />
               Feuilles en attente de traitement
             </h2>
-            <span className="text-xs text-text-anthracite/40">{enAttente.length} feuille{enAttente.length > 1 ? 's' : ''}</span>
+            <span className="text-xs text-text-anthracite/60">{enAttente.length} feuille{enAttente.length > 1 ? 's' : ''}</span>
           </div>
           <div className="divide-y divide-text-anthracite/5">
             {enAttente.sort((a, b) => b.dateEmission.localeCompare(a.dateEmission)).slice(0, 5).map(f => (
               <div key={f.numFeuille} className="flex items-center gap-4 py-3">
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-text-anthracite truncate">{f.nomAssure}</p>
-                  <p className="text-xs text-text-anthracite/50 truncate">
+                  <p className="text-xs text-text-anthracite/60 truncate">
                     {f.nomMedecin} — {f.motif}
                   </p>
                 </div>
-                <span className="text-xs text-text-anthracite/40 whitespace-nowrap">
+                <span className="text-xs text-text-anthracite/60 whitespace-nowrap">
                   {formatDateShort(f.dateEmission)}
                 </span>
                 <div className="flex gap-1.5">
@@ -297,18 +298,18 @@ export default function DashboardPage() {
             }).slice(0, 5).map(r => (
               <div key={`${r.numFeuille}-${r.numRemboursement}`} className="flex items-center gap-3 py-3 border-b border-text-anthracite/5 last:border-0">
                 <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
-                  r.statut === 'EFFECTUE' ? 'bg-success-green' : r.statut === 'REJETEE' ? 'bg-alert-red' : 'bg-sable-gold'
+                  r.statut === 'EFFECTUE' ? 'bg-success-green' : 'bg-sable-gold'
                 }`} />
                 <p className="flex-1 text-sm text-text-anthracite">
                   {r.nature} — {r.nomAssure}
                 </p>
-                <span className="text-xs text-text-anthracite/40 whitespace-nowrap">
+                <span className="text-xs text-text-anthracite/60 whitespace-nowrap">
                   {formatCurrency(r.montant)}
                 </span>
               </div>
             ))}
             {filteredFeuilles.length === 0 && (
-              <p className="text-center py-6 text-sm text-text-anthracite/40">Aucune activité</p>
+              <EmptyState title="Aucune activité" />
             )}
           </div>
         </Card>

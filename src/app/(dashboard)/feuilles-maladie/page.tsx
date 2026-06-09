@@ -1,17 +1,20 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef } from 'react'
 import { feuillesMaladie, medecins, assures } from '@/data/mock'
 import { Remboursement } from '@/lib/types'
 import { useAuth } from '@/hooks/useAuth'
+import { useDebounce } from '@/hooks/useDebounce'
+import { useKeyboard } from '@/hooks/useKeyboard'
 import Card from '@/components/ui/Card'
 import DataTable from '@/components/ui/DataTable'
 import StatusBadge from '@/components/ui/StatusBadge'
 import Badge from '@/components/ui/Badge'
 import Button from '@/components/ui/Button'
 import RemboursementFlow from '@/components/remboursements/RemboursementFlow'
+import FacturePreview from '@/components/facture/FacturePreview'
 import { formatCurrency } from '@/lib/utils'
-import { Plus, Filter, Search, HandCoins } from 'lucide-react'
+import { Plus, Filter, Search, HandCoins, Printer } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
@@ -44,13 +47,25 @@ export default function FeuillesMaladiePage() {
   )
   const [filterStatut, setFilterStatut] = useState<'TOUS' | 'EN_ATTENTE' | 'EFFECTUE'>('TOUS')
   const [search, setSearch] = useState('')
+  const debouncedSearch = useDebounce(search, 300)
   const [modalRemb, setModalRemb] = useState<RembWithMeta | null>(null)
+  const [factureRemb, setFactureRemb] = useState<RembWithMeta | null>(null)
+  const searchRef = useRef<HTMLInputElement>(null)
+  const [justCompletedId, setJustCompletedId] = useState<number | null>(null)
 
   const filtered = remboursements.filter(r => {
     const matchStatut = filterStatut === 'TOUS' || r.statut === filterStatut
-    const matchSearch = r.patientNom.toLowerCase().includes(search.toLowerCase()) ||
-      r.medecinNom.toLowerCase().includes(search.toLowerCase())
+    const matchSearch = r.patientNom.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+      r.medecinNom.toLowerCase().includes(debouncedSearch.toLowerCase())
     return matchStatut && matchSearch
+  })
+
+  useKeyboard({
+    '/': () => {
+      if (document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
+        searchRef.current?.focus()
+      }
+    },
   })
 
   const handleRemboursementComplete = (numRemb: number) => {
@@ -61,6 +76,8 @@ export default function FeuillesMaladiePage() {
           : r
       )
     )
+    setJustCompletedId(numRemb)
+    setTimeout(() => setJustCompletedId(null), 4000)
   }
 
   const selectedRemb = modalRemb
@@ -73,7 +90,7 @@ export default function FeuillesMaladiePage() {
       key: 'numFeuille',
       header: 'N°',
       render: (r: RembWithMeta) => (
-        <span className="font-mono text-xs text-text-anthracite/40">#{r.numFeuille}</span>
+        <span className="font-mono text-xs text-text-anthracite/60">#{r.numFeuille}</span>
       ),
     },
     {
@@ -118,14 +135,18 @@ export default function FeuillesMaladiePage() {
         <span className="text-sm text-text-anthracite/60">
           {r.statut === 'EFFECTUE'
             ? (r.modeReglement === 'VIREMENT' ? 'Virement' : 'Cash')
-            : <span className="text-text-anthracite/30">—</span>}
+            : <span className="text-text-anthracite/45">—</span>}
         </span>
       ),
     },
     {
       key: 'statut',
       header: 'Statut',
-      render: (r: RembWithMeta) => <StatusBadge statut={r.statut} />,
+      render: (r: RembWithMeta) => (
+        <span className={r.numRemboursement === justCompletedId ? 'animate-status-pulse inline-block' : ''}>
+          <StatusBadge statut={r.statut} />
+        </span>
+      ),
     },
     {
       key: 'actions',
@@ -139,6 +160,15 @@ export default function FeuillesMaladiePage() {
             >
               <HandCoins size={13} />
               Rembourser
+            </button>
+          )}
+          {r.statut === 'EFFECTUE' && user?.role === 'AGENT_OSS' && (
+            <button
+              onClick={e => { e.stopPropagation(); setFactureRemb(r) }}
+              className="flex items-center gap-1.5 px-2 py-1 text-xs font-medium border border-prune-sec/30 text-prune-sec hover:bg-prune-sec/5 transition-colors"
+            >
+              <Printer size={13} />
+              Facture
             </button>
           )}
         </div>
@@ -158,8 +188,8 @@ export default function FeuillesMaladiePage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-semibold text-prune-main mb-1">Remboursements</h1>
-          <p className="text-sm text-text-anthracite/50">Suivi des remboursements</p>
+          <h1 className="text-2xl md:text-3xl font-semibold text-prune-main mb-1">Feuilles de maladie</h1>
+          <p className="text-sm text-text-anthracite/60">Gestion des consultations et remboursements</p>
         </div>
         {user?.role === 'MEDECIN' && (
           <Link href="/feuilles-maladie/nouvelle">
@@ -173,19 +203,19 @@ export default function FeuillesMaladiePage() {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <Card className="!p-4">
-          <p className="text-xs font-medium uppercase tracking-wider text-text-anthracite/50">Total</p>
+          <p className="text-xs font-medium uppercase tracking-wider text-text-anthracite/60">Total</p>
           <p className="mt-1 text-lg font-semibold text-prune-main">{stats.total}</p>
         </Card>
         <Card className="!p-4">
-          <p className="text-xs font-medium uppercase tracking-wider text-text-anthracite/50">Effectués</p>
+          <p className="text-xs font-medium uppercase tracking-wider text-text-anthracite/60">Effectués</p>
           <p className="mt-1 text-lg font-semibold text-success-green">{stats.effectue}</p>
         </Card>
         <Card className="!p-4">
-          <p className="text-xs font-medium uppercase tracking-wider text-text-anthracite/50">En attente</p>
+          <p className="text-xs font-medium uppercase tracking-wider text-text-anthracite/60">En attente</p>
           <p className="mt-1 text-lg font-semibold text-alert-red">{stats.enAttente}</p>
         </Card>
         <Card className="!p-4">
-          <p className="text-xs font-medium uppercase tracking-wider text-text-anthracite/50">Remboursé</p>
+          <p className="text-xs font-medium uppercase tracking-wider text-text-anthracite/60">Remboursé</p>
           <p className="mt-1 text-lg font-semibold text-prune-main">{formatCurrency(stats.montantEffectue)}</p>
         </Card>
       </div>
@@ -193,17 +223,19 @@ export default function FeuillesMaladiePage() {
       <Card>
         <div className="flex items-center gap-3 mb-4">
           <div className="relative flex-1">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-anthracite/30" />
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-anthracite/45" />
             <input
+              ref={searchRef}
               type="text"
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Rechercher un patient ou médecin…"
-              className="w-full border border-text-anthracite/15 bg-white-pure pl-9 pr-3 py-2 text-sm text-text-anthracite placeholder:text-text-anthracite/30 focus:outline-none focus:border-prune-main transition-colors"
+              aria-label="Rechercher un patient ou médecin"
+              className="w-full border border-text-anthracite/15 bg-white-pure pl-9 pr-3 py-2 text-sm text-text-anthracite placeholder:text-text-anthracite/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-prune-main/40 focus-visible:border-prune-main transition-colors"
             />
           </div>
           <div className="flex items-center gap-2">
-            <Filter size={16} className="text-text-anthracite/30" />
+            <Filter size={16} className="text-text-anthracite/45" />
             {(['TOUS', 'EN_ATTENTE', 'EFFECTUE'] as const).map(s => (
                 <button
                   key={s}
@@ -235,6 +267,18 @@ export default function FeuillesMaladiePage() {
           onClose={() => setModalRemb(null)}
         />
       )}
+
+      {factureRemb && (() => {
+        const feuille = mesFeuilles.find(f => f.numFeuille === factureRemb.numFeuille)
+        if (!feuille) return null
+        return (
+          <FacturePreview
+            feuille={feuille}
+            remboursement={factureRemb}
+            onClose={() => setFactureRemb(null)}
+          />
+        )
+      })()}
     </div>
   )
 }

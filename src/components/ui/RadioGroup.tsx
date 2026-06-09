@@ -6,9 +6,10 @@ interface RadioGroupProps {
   options: { value: string; label: string }[]
   value: string
   onChange: (value: string) => void
+  error?: string
 }
 
-export default function RadioGroup({ label, name, options, value, onChange }: RadioGroupProps) {
+export default function RadioGroup({ label, name, options, value, onChange, error }: RadioGroupProps) {
   return (
     <div className="flex flex-col gap-2">
       {label && (
@@ -26,9 +27,9 @@ export default function RadioGroup({ label, name, options, value, onChange }: Ra
                 value={opt.value}
                 checked={value === opt.value}
                 onChange={() => onChange(opt.value)}
-                className="sr-only"
+                className="sr-only peer"
               />
-              <div className={`w-4 h-4 rounded-full border-2 transition-colors ${
+              <div className={`w-4 h-4 rounded-full border-2 transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-prune-main/40 peer-focus-visible:outline-none ${
                 value === opt.value
                   ? 'border-prune-main'
                   : 'border-text-anthracite/20 group-hover:border-text-anthracite/40'
@@ -42,6 +43,7 @@ export default function RadioGroup({ label, name, options, value, onChange }: Ra
           </label>
         ))}
       </div>
+      {error && <p className="text-xs text-alert-red">{error}</p>}
     </div>
   )
 }

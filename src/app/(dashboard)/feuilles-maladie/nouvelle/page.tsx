@@ -1,14 +1,21 @@
 'use client'
 
-import { useState, Suspense } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useState, useEffect, Suspense } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
+import { useForm, Controller } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { useKeyboard } from '@/hooks/useKeyboard'
 import { assures, medecins } from '@/data/mock'
+import { feuilleSchema, type FeuilleFormData } from '@/lib/schemas'
 import Card from '@/components/ui/Card'
 import Input from '@/components/ui/Input'
+import Textarea from '@/components/ui/Textarea'
 import SearchableSelect from '@/components/ui/SearchableSelect'
 import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
 import { Plus, X, FileText, Heart, Activity } from 'lucide-react'
+import EmptyState from '@/components/ui/EmptyState'
+import Breadcrumbs from '@/components/ui/Breadcrumbs'
 import { useAuth } from '@/hooks/useAuth'
 
 interface PrescriptionItem {
@@ -42,27 +49,45 @@ function NouvelleFeuillePageContent() {
 }
 
 function NouvelleFeuilleForm({ defaultPatientId }: { defaultPatientId?: string }) {
+  const router = useRouter()
   const { user } = useAuth()
   const currentMedecin = medecins.find(m => m.login === user?.login)
-  const [patientId, setPatientId] = useState(defaultPatientId || '')
-  const [medecinId, setMedecinId] = useState(currentMedecin ? String(currentMedecin.numMedecin) : '')
-  const [dateConsult, setDateConsult] = useState(() => new Date().toISOString().split('T')[0])
-  const [motif, setMotif] = useState('')
-  const [diagnostic, setDiagnostic] = useState('')
-  const [traitementPrescrit, setTraitementPrescrit] = useState('')
   const [prescriptions, setPrescriptions] = useState<PrescriptionItem[]>([])
   const [submitted, setSubmitted] = useState(false)
 
-  const [poids, setPoids] = useState('')
-  const [taille, setTaille] = useState('')
-  const [temperature, setTemperature] = useState('')
-  const [tensionArterielle, setTensionArterielle] = useState('')
-  const [frequenceCardiaque, setFrequenceCardiaque] = useState('')
-  const [frequenceRespiratoire, setFrequenceRespiratoire] = useState('')
-  const [saturationOxygene, setSaturationOxygene] = useState('')
-  const [antecedents, setAntecedents] = useState('')
-  const [symptomes, setSymptomes] = useState('')
-  const [observations, setObservations] = useState('')
+  const { control, register, handleSubmit, setValue, watch, formState: { errors, isSubmitting } } = useForm<FeuilleFormData>({
+    resolver: zodResolver(feuilleSchema),
+    defaultValues: {
+      numAssure: undefined as any,
+      numMedecin: undefined as any,
+      dateConsultation: new Date().toISOString().split('T')[0],
+      motif: '',
+      symptomes: '',
+      diagnostic: '',
+      traitementPrescrit: '',
+      poids: '',
+      taille: '',
+      temperature: '',
+      tensionArterielle: '',
+      frequenceCardiaque: '',
+      frequenceRespiratoire: '',
+      saturationOxygene: '',
+      antecedents: '',
+      observations: '',
+    },
+  })
+
+  useEffect(() => {
+    if (currentMedecin) {
+      setValue('numMedecin', currentMedecin.numMedecin)
+    }
+  }, [currentMedecin, setValue])
+
+  useEffect(() => {
+    if (defaultPatientId) {
+      setValue('numAssure', Number(defaultPatientId))
+    }
+  }, [defaultPatientId, setValue])
 
   const patientOptions = assures.map(a => ({
     value: String(a.numAssure),
@@ -106,17 +131,21 @@ function NouvelleFeuilleForm({ defaultPatientId }: { defaultPatientId?: string }
     setPrescriptions(prev => prev.filter((_, i) => i !== idx))
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+  const onSubmit = (data: FeuilleFormData) => {
     setSubmitted(true)
   }
+
+  const watchedDateConsultation = watch('dateConsultation')
+  const watchedNumAssure = watch('numAssure')
+  const watchedDiagnostic = watch('diagnostic')
 
   if (submitted) {
     return (
       <div>
+        <Breadcrumbs items={[{ label: 'Accueil', href: '/' }, { label: 'Feuilles de maladie', href: '/feuilles-maladie' }, { label: 'Nouvelle feuille' }]} />
         <div className="mb-6">
-          <h1 className="text-xl font-semibold text-prune-main mb-1">Nouvelle feuille de maladie</h1>
-          <p className="text-sm text-text-anthracite/50">Enregistrement d&apos;une consultation</p>
+          <h1 className="text-2xl md:text-3xl font-semibold text-prune-main mb-1">Nouvelle feuille de maladie</h1>
+          <p className="text-sm text-text-anthracite/60">Enregistrement d&apos;une consultation</p>
         </div>
         <Card className="max-w-xl">
           <div className="flex flex-col items-center text-center py-8">
@@ -125,15 +154,15 @@ function NouvelleFeuilleForm({ defaultPatientId }: { defaultPatientId?: string }
             </div>
             <h2 className="text-lg font-semibold text-prune-main mb-2">Feuille enregistrée</h2>
             <p className="text-sm text-text-anthracite/60 mb-1">
-              Consultation du {dateConsult} — {assures.find(a => String(a.numAssure) === patientId)?.prenom} {assures.find(a => String(a.numAssure) === patientId)?.nom}
+              Consultation du {watchedDateConsultation} — {assures.find(a => a.numAssure === watchedNumAssure)?.prenom} {assures.find(a => a.numAssure === watchedNumAssure)?.nom}
             </p>
             <p className="text-sm text-text-anthracite/60 mb-1">
-              Diagnostic : {diagnostic}
+              Diagnostic : {watchedDiagnostic}
             </p>
-            <p className="text-sm text-text-anthracite/40 mb-4">En attente de validation par un agent OSS</p>
+            <p className="text-sm text-text-anthracite/60 mb-4">En attente de validation par un agent OSS</p>
             <div className="flex gap-3">
               <Button onClick={() => setSubmitted(false)}>Nouvelle saisie</Button>
-              <Button variant="secondary" onClick={() => window.location.href = '/feuilles-maladie'}>
+              <Button variant="secondary" onClick={() => router.push('/feuilles-maladie')}>
                 Voir le suivi
               </Button>
             </div>
@@ -145,25 +174,33 @@ function NouvelleFeuilleForm({ defaultPatientId }: { defaultPatientId?: string }
 
   return (
     <div>
+      <Breadcrumbs items={[{ label: 'Accueil', href: '/' }, { label: 'Feuilles de maladie', href: '/feuilles-maladie' }, { label: 'Nouvelle feuille' }]} />
       <div className="mb-6">
-        <h1 className="text-xl font-semibold text-prune-main mb-1">Nouvelle feuille de maladie</h1>
-        <p className="text-sm text-text-anthracite/50">Saisie d&apos;une consultation médicale</p>
+          <h1 className="text-2xl md:text-3xl font-semibold text-prune-main mb-1">Nouvelle feuille de maladie</h1>
+          <p className="text-sm text-text-anthracite/60">Saisie d&apos;une consultation médicale</p>
       </div>
 
-      <form onSubmit={handleSubmit} className="max-w-3xl flex flex-col gap-6">
+      <form onSubmit={handleSubmit(onSubmit)} className="w-full lg:max-w-3xl flex flex-col gap-6">
         {/* ── Patient & Médecin ── */}
         <Card>
           <div className="flex items-center gap-2 mb-4">
             <span className="text-sm font-semibold text-prune-main">Patient</span>
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <SearchableSelect
-              label="Patient (Assuré)"
-              options={patientOptions}
-              placeholder="Sélectionner un assuré"
-              value={patientId}
-              onChange={setPatientId}
-              required
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Controller
+              name="numAssure"
+              control={control}
+              render={({ field }) => (
+                <SearchableSelect
+                  label="Patient (Assuré)"
+                  options={patientOptions}
+                  placeholder="Sélectionner un assuré"
+                  value={field.value ? String(field.value) : ''}
+                  onChange={v => field.onChange(v ? Number(v) : undefined)}
+                  error={errors.numAssure?.message}
+                  required
+                />
+              )}
             />
             {user?.role === 'MEDECIN' && currentMedecin ? (
               <div className="flex flex-col gap-1">
@@ -175,13 +212,20 @@ function NouvelleFeuilleForm({ defaultPatientId }: { defaultPatientId?: string }
                 </div>
               </div>
             ) : (
-              <SearchableSelect
-                label="Médecin consultant"
-                options={medecinOptions}
-                placeholder="Sélectionner un médecin"
-                value={medecinId}
-                onChange={setMedecinId}
-                required
+              <Controller
+                name="numMedecin"
+                control={control}
+                render={({ field }) => (
+                  <SearchableSelect
+                    label="Médecin consultant"
+                    options={medecinOptions}
+                    placeholder="Sélectionner un médecin"
+                    value={field.value ? String(field.value) : ''}
+                    onChange={v => field.onChange(v ? Number(v) : undefined)}
+                    error={errors.numMedecin?.message}
+                    required
+                  />
+                )}
               />
             )}
           </div>
@@ -195,34 +239,30 @@ function NouvelleFeuilleForm({ defaultPatientId }: { defaultPatientId?: string }
 
           </div>
 
-          <div className="grid grid-cols-3 gap-4 mb-4">
-            <Input label="Poids (kg)" value={poids} onChange={e => setPoids(e.target.value)} placeholder="Ex: 72.5" />
-            <Input label="Taille (m)" value={taille} onChange={e => setTaille(e.target.value)} placeholder="Ex: 1.75" />
-            <Input label="Température (°C)" value={temperature} onChange={e => setTemperature(e.target.value)} placeholder="Ex: 37.2" />
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 mb-4">
+            <Input label="Poids (kg)" {...register('poids')} placeholder="Ex: 72.5" />
+            <Input label="Taille (m)" {...register('taille')} placeholder="Ex: 1.75" />
+            <Input label="Température (°C)" {...register('temperature')} placeholder="Ex: 37.2" />
           </div>
 
-          <div className="grid grid-cols-3 gap-4 mb-4">
-            <Input label="Tension artérielle" value={tensionArterielle} onChange={e => setTensionArterielle(e.target.value)} placeholder="Ex: 12/8" />
-            <Input label="Fréq. cardiaque (bpm)" value={frequenceCardiaque} onChange={e => setFrequenceCardiaque(e.target.value)} placeholder="Ex: 72" />
-            <Input label="Fréq. respiratoire" value={frequenceRespiratoire} onChange={e => setFrequenceRespiratoire(e.target.value)} placeholder="Ex: 16" />
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 mb-4">
+            <Input label="Tension artérielle" {...register('tensionArterielle')} placeholder="Ex: 12/8" />
+            <Input label="Fréq. cardiaque (bpm)" {...register('frequenceCardiaque')} placeholder="Ex: 72" />
+            <Input label="Fréq. respiratoire" {...register('frequenceRespiratoire')} placeholder="Ex: 16" />
           </div>
 
-          <div className="grid grid-cols-3 gap-4 mb-4">
-            <Input label="Saturation O₂ (%)" value={saturationOxygene} onChange={e => setSaturationOxygene(e.target.value)} placeholder="Ex: 98" />
-            <div />
-            <div />
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 mb-4">
+            <Input label="Saturation O₂ (%)" {...register('saturationOxygene')} placeholder="Ex: 98" />
+            <div className="hidden md:block" />
+            <div className="hidden md:block" />
           </div>
 
           <div>
-            <label className="text-xs font-medium uppercase tracking-wider text-text-anthracite/60 mb-1.5 block">
-              Antécédents médicaux
-            </label>
-            <textarea
-              value={antecedents}
-              onChange={e => setAntecedents(e.target.value)}
+            <Textarea
+              label="Antécédents médicaux"
+              {...register('antecedents')}
               placeholder="Antécédents du patient..."
               rows={2}
-              className="w-full border border-text-anthracite/15 bg-white-pure px-3 py-2 text-sm text-text-anthracite placeholder:text-text-anthracite/30 focus:outline-none focus:border-prune-main transition-colors resize-y"
             />
           </div>
         </Card>
@@ -234,60 +274,49 @@ function NouvelleFeuilleForm({ defaultPatientId }: { defaultPatientId?: string }
             <span className="text-sm font-semibold text-prune-main">Consultation</span>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 mb-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <Input
               label="Date de consultation"
               type="date"
-              value={dateConsult}
-              onChange={e => setDateConsult(e.target.value)}
+              {...register('dateConsultation')}
+              error={errors.dateConsultation?.message}
               required
             />
             <Input
               label="Motif"
-              value={motif}
-              onChange={e => setMotif(e.target.value)}
+              {...register('motif')}
               placeholder="Motif de la consultation"
+              error={errors.motif?.message}
               required
             />
           </div>
 
           <div className="mb-4">
-            <label className="text-xs font-medium uppercase tracking-wider text-text-anthracite/60 mb-1.5 block">
-              Symptômes
-            </label>
-            <textarea
-              value={symptomes}
-              onChange={e => setSymptomes(e.target.value)}
+            <Textarea
+              label="Symptômes"
+              {...register('symptomes')}
               placeholder="Décrivez les symptômes..."
               rows={2}
-              className="w-full border border-text-anthracite/15 bg-white-pure px-3 py-2 text-sm text-text-anthracite placeholder:text-text-anthracite/30 focus:outline-none focus:border-prune-main transition-colors resize-y"
             />
           </div>
 
           <div className="mb-4">
-            <label className="text-xs font-medium uppercase tracking-wider text-text-anthracite/60 mb-1.5 block">
-              Diagnostic *
-            </label>
-            <textarea
-              value={diagnostic}
-              onChange={e => setDiagnostic(e.target.value)}
+            <Textarea
+              label="Diagnostic *"
+              {...register('diagnostic')}
               placeholder="Diagnostic médical détaillé…"
+              error={errors.diagnostic?.message}
               required
               rows={2}
-              className="w-full border border-text-anthracite/15 bg-white-pure px-3 py-2 text-sm text-text-anthracite placeholder:text-text-anthracite/30 focus:outline-none focus:border-prune-main transition-colors resize-y"
             />
           </div>
 
           <div>
-            <label className="text-xs font-medium uppercase tracking-wider text-text-anthracite/60 mb-1.5 block">
-              Traitement prescrit
-            </label>
-            <textarea
-              value={traitementPrescrit}
-              onChange={e => setTraitementPrescrit(e.target.value)}
+            <Textarea
+              label="Traitement prescrit"
+              {...register('traitementPrescrit')}
               placeholder="Traitement prescrit..."
               rows={2}
-              className="w-full border border-text-anthracite/15 bg-white-pure px-3 py-2 text-sm text-text-anthracite placeholder:text-text-anthracite/30 focus:outline-none focus:border-prune-main transition-colors resize-y"
             />
           </div>
         </Card>
@@ -309,9 +338,7 @@ function NouvelleFeuilleForm({ defaultPatientId }: { defaultPatientId?: string }
           </div>
 
           {prescriptions.length === 0 && (
-            <p className="text-sm text-text-anthracite/30 italic py-2">
-              Aucune prescription — ajoutez un médicament ou une orientation spécialiste
-            </p>
+            <EmptyState icon={<Plus size={28} />} title="Aucune prescription" description="Ajoutez un médicament ou une orientation spécialiste" />
           )}
 
           <div className="space-y-3">
@@ -320,7 +347,7 @@ function NouvelleFeuilleForm({ defaultPatientId }: { defaultPatientId?: string }
                 <button
                   type="button"
                   onClick={() => removePrescription(idx)}
-                  className="absolute top-3 right-3 text-text-anthracite/30 hover:text-alert-red transition-colors"
+                  className="absolute top-3 right-3 text-text-anthracite/45 hover:text-alert-red transition-colors"
                 >
                   <X size={14} />
                 </button>
@@ -331,7 +358,7 @@ function NouvelleFeuilleForm({ defaultPatientId }: { defaultPatientId?: string }
                 </div>
 
                 {p.type === 'MEDICAMENT' ? (
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <Input
                       label="Médicament"
                       value={p.nomMedicament || ''}
@@ -352,7 +379,7 @@ function NouvelleFeuilleForm({ defaultPatientId }: { defaultPatientId?: string }
                     />
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <SearchableSelect
                       label="Spécialiste"
                       options={specialisteOptions}
@@ -379,25 +406,21 @@ function NouvelleFeuilleForm({ defaultPatientId }: { defaultPatientId?: string }
 
         {/* ── Observations ── */}
         <Card>
-          <div className="flex items-center gap-2 mb-3">
-            <span className="text-sm font-semibold text-prune-main">Observations</span>
-          </div>
-          <textarea
-            value={observations}
-            onChange={e => setObservations(e.target.value)}
+          <Textarea
+            label="Observations"
+            {...register('observations')}
             placeholder="Observations complémentaires..."
             rows={2}
-            className="w-full border border-text-anthracite/15 bg-white-pure px-3 py-2 text-sm text-text-anthracite placeholder:text-text-anthracite/30 focus:outline-none focus:border-prune-main transition-colors resize-y"
           />
         </Card>
 
         {/* ── Actions ── */}
         <div className="flex gap-3 pt-2">
-          <Button type="submit">
+          <Button type="submit" loading={isSubmitting}>
             <FileText size={16} className="mr-1.5" />
             Enregistrer la feuille
           </Button>
-          <Button type="button" variant="secondary" onClick={() => window.location.href = '/feuilles-maladie'}>
+          <Button type="button" variant="secondary" onClick={() => router.push('/feuilles-maladie')}>
             Annuler
           </Button>
         </div>

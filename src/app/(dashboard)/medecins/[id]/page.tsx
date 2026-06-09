@@ -1,8 +1,11 @@
 'use client'
 
 import { use, useState } from 'react'
-import { medecins, feuillesMaladie, mettreAJourMotDePasse } from '@/data/mock'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { medecins, assures, feuillesMaladie, mettreAJourMotDePasse, supprimerMedecin } from '@/data/mock'
 import { FeuilleMaladie } from '@/lib/types'
+import { passwordSchema, type PasswordFormData } from '@/lib/schemas'
 import Card from '@/components/ui/Card'
 import Badge from '@/components/ui/Badge'
 import StatusBadge from '@/components/ui/StatusBadge'
@@ -10,34 +13,35 @@ import DataTable from '@/components/ui/DataTable'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import { ArrowLeft, Mail, Calendar, User, Stethoscope, Activity, FileText, Trash2, Eye, EyeOff, CheckCircle } from 'lucide-react'
+import EmptyState from '@/components/ui/EmptyState'
+import Breadcrumbs from '@/components/ui/Breadcrumbs'
 import Link from 'next/link'
 import { formatDateShort } from '@/lib/utils'
 import { useAuth } from '@/hooks/useAuth'
+import { useConfirm } from '@/hooks/useConfirm'
+import { useToast } from '@/components/ui/Toast'
 import { useRouter } from 'next/navigation'
 
 export default function MedecinDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const { user } = useAuth()
+  const { confirm: ask, dialog: confirmDialog } = useConfirm()
+  const toast = useToast()
   const router = useRouter()
   const medecin = medecins.find(m => m.numMedecin === Number(id))
 
   if (!medecin) {
     return (
       <div>
-        <Link href="/medecins" className="inline-flex items-center gap-1 text-sm text-text-anthracite/50 hover:text-prune-main mb-4 transition-colors">
-          <ArrowLeft size={16} /> Retour aux médecins
-        </Link>
+        <Breadcrumbs items={[{ label: 'Accueil', href: '/' }, { label: 'Médecins', href: '/medecins' }]} />
         <Card>
-          <p className="text-text-anthracite/50 text-center py-8">Médecin introuvable</p>
+          <p className="text-text-anthracite/60 text-center py-8">Médecin introuvable</p>
         </Card>
       </div>
     )
   }
 
   const [showMdpForm, setShowMdpForm] = useState(false)
-  const [ancienMdp, setAncienMdp] = useState('')
-  const [nouveauMdp, setNouveauMdp] = useState('')
-  const [confirmerMdp, setConfirmerMdp] = useState('')
   const [showAncien, setShowAncien] = useState(false)
   const [showNouveau, setShowNouveau] = useState(false)
   const [showConfirmer, setShowConfirmer] = useState(false)
@@ -45,32 +49,25 @@ export default function MedecinDetailPage({ params }: { params: Promise<{ id: st
   const [mdpSuccess, setMdpSuccess] = useState(false)
   const estProprietaire = user?.login === medecin.login
 
+  const { register: pwdRegister, handleSubmit: pwdHandleSubmit, formState: { errors: pwdErrors }, reset: pwdReset } = useForm<PasswordFormData>({
+    resolver: zodResolver(passwordSchema),
+  })
+
   const consultations = feuillesMaladie.filter(f => f.numMedecin === medecin.numMedecin)
   const patientsVus = new Set(consultations.map(f => f.numAssure)).size
 
-  const handleChangerMdp = (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleChangerMdp = (data: PasswordFormData) => {
     setMdpError('')
     setMdpSuccess(false)
 
-    if (ancienMdp !== user?.motDePasse) {
+    if (data.ancienMdp !== user?.motDePasse) {
       setMdpError('Ancien mot de passe incorrect')
       return
     }
-    if (nouveauMdp.length < 4) {
-      setMdpError('Le nouveau mot de passe doit contenir au moins 4 caractères')
-      return
-    }
-    if (nouveauMdp !== confirmerMdp) {
-      setMdpError('Les mots de passe ne correspondent pas')
-      return
-    }
 
-    mettreAJourMotDePasse(medecin.login, nouveauMdp)
+    mettreAJourMotDePasse(medecin.login, data.nouveauMdp)
     setMdpSuccess(true)
-    setAncienMdp('')
-    setNouveauMdp('')
-    setConfirmerMdp('')
+    pwdReset()
     setShowMdpForm(false)
   }
 
@@ -99,8 +96,7 @@ export default function MedecinDetailPage({ params }: { params: Promise<{ id: st
       header: 'Statut',
       render: (f: FeuilleMaladie) => {
         const tousEffectues = f.remboursements.every(r => r.statut === 'EFFECTUE')
-        const aUnRejete = f.remboursements.some(r => r.statut === 'REJETEE')
-        return <StatusBadge statut={tousEffectues ? 'EFFECTUE' : aUnRejete ? 'REJETEE' : 'EN_ATTENTE'} />
+        return <StatusBadge statut={tousEffectues ? 'EFFECTUE' : 'EN_ATTENTE'} />
       },
     },
     {
@@ -116,17 +112,15 @@ export default function MedecinDetailPage({ params }: { params: Promise<{ id: st
 
   return (
     <div>
-      <Link href="/medecins" className="inline-flex items-center gap-1 text-sm text-text-anthracite/50 hover:text-prune-main mb-4 transition-colors">
-        <ArrowLeft size={16} /> Retour aux médecins
-      </Link>
+      <Breadcrumbs items={[{ label: 'Accueil', href: '/' }, { label: 'Médecins', href: '/medecins' }, { label: `Dr. ${medecin.prenom} ${medecin.nom}` }]} />
 
       <div className="flex items-start justify-between mb-6">
         <div>
           <div className="flex items-center gap-3 mb-1">
-            <h1 className="text-xl font-semibold text-prune-main">Dr. {medecin.prenom} {medecin.nom}</h1>
+            <h1 className="text-2xl md:text-3xl font-semibold text-prune-main break-words">Dr. {medecin.prenom} {medecin.nom}</h1>
             {medecin.estAssure && <Badge variant="alert">Assuré</Badge>}
           </div>
-          <p className="text-sm text-text-anthracite/50">
+          <p className="text-sm text-text-anthracite/60">
             {medecin.typeMedecin === 'GENERALISTE' ? 'Médecin généraliste' : medecin.nomSpecialite}
           </p>
         </div>
@@ -136,13 +130,23 @@ export default function MedecinDetailPage({ params }: { params: Promise<{ id: st
           </Badge>
           {user?.role === 'AGENT_OSS' && (
             <button
-              onClick={() => {
-                let msg = `Supprimer Dr. ${medecin.prenom} ${medecin.nom} ?`
-                if (consultations.length > 0) {
-                  msg += `\n\n⚠️ Ce médecin a ${consultations.length} consultation(s) associée(s). Elles seront également supprimées.`
+              onClick={async () => {
+                let msg = `Êtes-vous sûr de vouloir supprimer Dr. ${medecin.prenom} ${medecin.nom} ?`
+                const assuresAffectes = assures.filter(a => a.numMedecinTraitant === medecin.numMedecin)
+                if (consultations.length > 0 || assuresAffectes.length > 0) {
+                  msg += '\n\n'
+                  if (consultations.length > 0) {
+                    msg += `• ${consultations.length} consultation(s) resteront dans le système\n`
+                  }
+                  if (assuresAffectes.length > 0) {
+                    msg += `• ${assuresAffectes.length} assuré(s) perdront leur médecin traitant\n`
+                  }
                 }
-                msg += '\n\nCette action est irréversible.'
-                if (window.confirm(msg)) {
+                msg += '\nCette action est irréversible.'
+                const ok = await ask(msg)
+                if (ok) {
+                  supprimerMedecin(medecin.numMedecin)
+                  toast.show(`Dr. ${medecin.prenom} ${medecin.nom} a été supprimé`, 'success')
                   router.push('/medecins')
                 }
               }}
@@ -155,34 +159,34 @@ export default function MedecinDetailPage({ params }: { params: Promise<{ id: st
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 mb-6">
         <Card className="lg:col-span-2">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-text-anthracite/50 mb-4">Informations</h2>
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-text-anthracite/60 mb-4">Informations</h2>
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div className="flex items-center gap-2">
-              <User size={14} className="text-text-anthracite/30" />
-              <span className="text-text-anthracite/50">Nom</span>
+              <User size={14} className="text-text-anthracite/45" />
+              <span className="text-text-anthracite/60">Nom</span>
               <span className="ml-auto font-medium text-prune-main">{medecin.nom}</span>
             </div>
             <div className="flex items-center gap-2">
-              <User size={14} className="text-text-anthracite/30" />
-              <span className="text-text-anthracite/50">Prénom</span>
+              <User size={14} className="text-text-anthracite/45" />
+              <span className="text-text-anthracite/60">Prénom</span>
               <span className="ml-auto font-medium text-prune-main">{medecin.prenom}</span>
             </div>
             <div className="flex items-center gap-2">
-              <Calendar size={14} className="text-text-anthracite/30" />
-              <span className="text-text-anthracite/50">Date naissance</span>
+              <Calendar size={14} className="text-text-anthracite/45" />
+              <span className="text-text-anthracite/60">Date naissance</span>
               <span className="ml-auto font-medium">{formatDateShort(medecin.dateNaissance)}</span>
             </div>
             <div className="flex items-center gap-2">
-              <Mail size={14} className="text-text-anthracite/30" />
-              <span className="text-text-anthracite/50">Email</span>
+              <Mail size={14} className="text-text-anthracite/45" />
+              <span className="text-text-anthracite/60">Email</span>
               <span className="ml-auto font-medium">{medecin.email || '—'}</span>
             </div>
             <div className="col-span-2">
               <div className="flex items-center gap-2">
-                <Stethoscope size={14} className="text-text-anthracite/30" />
-                <span className="text-text-anthracite/50">Formation</span>
+                <Stethoscope size={14} className="text-text-anthracite/45" />
+                <span className="text-text-anthracite/60">Formation</span>
                 <span className="ml-auto font-medium text-right">{medecin.typeFormation || medecin.nomSpecialite}</span>
               </div>
             </div>
@@ -192,15 +196,15 @@ export default function MedecinDetailPage({ params }: { params: Promise<{ id: st
         <div className="flex flex-col gap-3">
           <Card className="!p-4 flex-1">
             <div className="flex items-center gap-2 mb-2">
-              <Activity size={14} className="text-prune-sec/40" />
-              <span className="text-xs font-medium uppercase tracking-wider text-text-anthracite/50">Consultations</span>
+              <Activity size={14} className="text-prune-sec/60" />
+              <span className="text-xs font-medium uppercase tracking-wider text-text-anthracite/60">Consultations</span>
             </div>
             <p className="text-lg font-semibold text-prune-main">{consultations.length}</p>
           </Card>
           <Card className="!p-4 flex-1">
             <div className="flex items-center gap-2 mb-2">
-              <FileText size={14} className="text-prune-sec/40" />
-              <span className="text-xs font-medium uppercase tracking-wider text-text-anthracite/50">Patients</span>
+              <FileText size={14} className="text-prune-sec/60" />
+              <span className="text-xs font-medium uppercase tracking-wider text-text-anthracite/60">Patients</span>
             </div>
             <p className="text-lg font-semibold text-prune-main">{patientsVus}</p>
           </Card>
@@ -209,7 +213,7 @@ export default function MedecinDetailPage({ params }: { params: Promise<{ id: st
 
       {estProprietaire && (
         <Card className="mb-6">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-text-anthracite/50 mb-4">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-text-anthracite/60 mb-4">
             Mot de passe
           </h2>
 
@@ -228,16 +232,16 @@ export default function MedecinDetailPage({ params }: { params: Promise<{ id: st
               Changer le mot de passe
             </button>
           ) : (
-            <form onSubmit={handleChangerMdp} className="flex flex-col gap-4 max-w-sm">
+            <form onSubmit={pwdHandleSubmit(handleChangerMdp)} className="flex flex-col gap-4 max-w-sm">
               <Input
                 label="Ancien mot de passe"
                 type={showAncien ? 'text' : 'password'}
-                value={ancienMdp}
-                onChange={e => setAncienMdp(e.target.value)}
+                {...pwdRegister('ancienMdp')}
                 required
                 placeholder="••••••••"
+                error={pwdErrors.ancienMdp?.message}
                 rightElement={
-                  <button type="button" onClick={() => setShowAncien(!showAncien)} tabIndex={-1} className="text-text-anthracite/40 hover:text-prune-main transition-colors">
+                  <button type="button" onClick={() => setShowAncien(!showAncien)} tabIndex={-1} className="text-text-anthracite/60 hover:text-prune-main transition-colors">
                     {showAncien ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 }
@@ -245,12 +249,12 @@ export default function MedecinDetailPage({ params }: { params: Promise<{ id: st
               <Input
                 label="Nouveau mot de passe"
                 type={showNouveau ? 'text' : 'password'}
-                value={nouveauMdp}
-                onChange={e => setNouveauMdp(e.target.value)}
+                {...pwdRegister('nouveauMdp')}
                 required
                 placeholder="••••••••"
+                error={pwdErrors.nouveauMdp?.message}
                 rightElement={
-                  <button type="button" onClick={() => setShowNouveau(!showNouveau)} tabIndex={-1} className="text-text-anthracite/40 hover:text-prune-main transition-colors">
+                  <button type="button" onClick={() => setShowNouveau(!showNouveau)} tabIndex={-1} className="text-text-anthracite/60 hover:text-prune-main transition-colors">
                     {showNouveau ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 }
@@ -258,12 +262,12 @@ export default function MedecinDetailPage({ params }: { params: Promise<{ id: st
               <Input
                 label="Confirmer le mot de passe"
                 type={showConfirmer ? 'text' : 'password'}
-                value={confirmerMdp}
-                onChange={e => setConfirmerMdp(e.target.value)}
+                {...pwdRegister('confirmerMdp')}
                 required
                 placeholder="••••••••"
+                error={pwdErrors.confirmerMdp?.message}
                 rightElement={
-                  <button type="button" onClick={() => setShowConfirmer(!showConfirmer)} tabIndex={-1} className="text-text-anthracite/40 hover:text-prune-main transition-colors">
+                  <button type="button" onClick={() => setShowConfirmer(!showConfirmer)} tabIndex={-1} className="text-text-anthracite/60 hover:text-prune-main transition-colors">
                     {showConfirmer ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 }
@@ -283,14 +287,15 @@ export default function MedecinDetailPage({ params }: { params: Promise<{ id: st
       )}
 
       <Card>
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-text-anthracite/50 mb-4">
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-text-anthracite/60 mb-4">
           Consultations récentes
         </h2>
         <DataTable columns={columns} data={consultations} />
         {consultations.length === 0 && (
-          <p className="text-center py-8 text-sm text-text-anthracite/40">Aucune consultation</p>
+          <EmptyState icon={<Activity size={28} />} title="Aucune consultation" />
         )}
       </Card>
+      {confirmDialog}
     </div>
   )
 }
