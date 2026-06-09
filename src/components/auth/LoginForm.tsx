@@ -17,13 +17,13 @@ export default function LoginForm() {
   const { login } = useAuth()
   const router = useRouter()
 
-  const { register, handleSubmit, formState: { errors } } = useForm<LoginFormData>({
+  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
   })
 
-  const onSubmit = (data: LoginFormData) => {
+  const onSubmit = async (data: LoginFormData) => {
     setError('')
-    const success = login(data.login, data.motDePasse)
+    const success = await login(data.login, data.motDePasse)
     if (success) {
       router.push('/')
     } else {
@@ -72,7 +72,7 @@ export default function LoginForm() {
         <p className="text-xs text-alert-red text-center">{error}</p>
       )}
 
-      <Button type="submit" className="w-full">
+      <Button type="submit" className="w-full" loading={isSubmitting}>
         Se connecter
       </Button>
 

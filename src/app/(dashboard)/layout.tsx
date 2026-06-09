@@ -9,22 +9,22 @@ import Sidebar from '@/components/layout/Sidebar'
 import { ToastProvider } from '@/components/ui/Toast'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, loading } = useAuth()
   const router = useRouter()
   const pathname = usePathname()
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!loading && !isAuthenticated) {
       router.push('/login')
     }
-  }, [isAuthenticated, router])
+  }, [loading, isAuthenticated, router])
 
   useEffect(() => {
     setSidebarOpen(false)
   }, [pathname])
 
-  if (!isAuthenticated) return null
+  if (loading || !isAuthenticated) return null
 
   return (
     <ToastProvider>
