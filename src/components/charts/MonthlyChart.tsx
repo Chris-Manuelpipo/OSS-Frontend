@@ -4,6 +4,7 @@ import { useMemo } from 'react'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import Card from '@/components/ui/Card'
 import { useCSSVar } from '@/hooks/useCSSVar'
+import { formatMontant } from '@/lib/utils'
 import type { FeuilleMaladie } from '@/lib/types'
 
 const monthLabels: Record<string, string> = {
@@ -42,8 +43,6 @@ export default function MonthlyChart({ feuilles }: { feuilles: FeuilleMaladie[] 
       }))
   }, [feuilles])
 
-  const formatEuro = (v: number) => `${v.toLocaleString('fr-FR')} FCFA`
-
   return (
     <Card>
       <h3 className="text-sm font-semibold text-prune-main uppercase tracking-wider mb-4">
@@ -63,10 +62,10 @@ export default function MonthlyChart({ feuilles }: { feuilles: FeuilleMaladie[] 
               tick={{ fontSize: 12, fill: textColor, fillOpacity: 0.5 }}
               axisLine={false}
               tickLine={false}
-              tickFormatter={formatEuro}
+              tickFormatter={formatMontant}
             />
             <Tooltip
-              formatter={(value) => [formatEuro(Number(value)), 'Montant']}
+              formatter={(value) => [formatMontant(Number(value)), 'Montant']}
               labelFormatter={(label) => `Mois : ${label}`}
               contentStyle={{
                 backgroundColor: bgColor,

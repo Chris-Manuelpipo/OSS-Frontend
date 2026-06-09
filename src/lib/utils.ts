@@ -1,8 +1,19 @@
+// Devise unique de l'application — Franc CFA.
+export const DEVISE = 'FCFA'
+
+/** Montant détaillé avec 2 décimales, suffixé « FCFA ». */
 export function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('fr-FR', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  }).format(amount) + ' FCFA'
+  }).format(amount) + ` ${DEVISE}`
+}
+
+/** Montant compact sans décimales (axes/légendes de graphiques), suffixé « FCFA ». */
+export function formatMontant(amount: number): string {
+  return new Intl.NumberFormat('fr-FR', {
+    maximumFractionDigits: 0,
+  }).format(amount) + ` ${DEVISE}`
 }
 
 export function formatDate(dateString: string): string {

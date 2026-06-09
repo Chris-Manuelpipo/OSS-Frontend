@@ -4,6 +4,7 @@ import { useMemo } from 'react'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
 import Card from '@/components/ui/Card'
 import { useCSSVar } from '@/hooks/useCSSVar'
+import { formatMontant } from '@/lib/utils'
 import type { FeuilleMaladie } from '@/lib/types'
 
 const COLORS = ['#7A5080', '#C4976A']
@@ -51,7 +52,7 @@ export default function PaymentModeChart({ feuilles }: { feuilles: FeuilleMaladi
             </Pie>
             <Tooltip
               formatter={(value) => [
-                `${Number(value).toLocaleString('fr-FR')} FCFA (${((Number(value) / total) * 100).toFixed(0)}%)`,
+                `${formatMontant(Number(value))} (${((Number(value) / total) * 100).toFixed(0)}%)`,
                 'Montant',
               ]}
               contentStyle={{
@@ -71,7 +72,7 @@ export default function PaymentModeChart({ feuilles }: { feuilles: FeuilleMaladi
               className="inline-block w-2.5 h-2.5"
               style={{ backgroundColor: COLORS[i % COLORS.length] }}
             />
-            {d.name} — {d.value.toLocaleString('fr-FR')} FCFA
+            {d.name} — {formatMontant(d.value)}
           </div>
         ))}
       </div>
