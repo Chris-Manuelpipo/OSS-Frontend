@@ -1,6 +1,12 @@
 @import "tailwindcss";
 
-@theme inline {
+/*
+ * Theme tokens — NON-inline on purpose.
+ * Utilities compile to `var(--color-*)`, so redefining the tokens under
+ * `:root.dark` cascades to every utility (bg-*, text-*, border-*, /opacity…)
+ * automatically. No per-class dark overrides needed.
+ */
+@theme {
   --color-prune-main: #4A2C52;
   --color-prune-sec: #7A5080;
   --color-sable-gold: #C4976A;
@@ -12,6 +18,30 @@
   --color-prune-light: #ECD8EE;
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+}
+
+/*
+ * Dark theme — only the tokens that flip are redefined.
+ * `prune-main` and `prune-light` intentionally stay put: prune-main is a
+ * branded *surface* (buttons, sidebar, badges) that always carries light text,
+ * and prune-light is that light text. The single exception is prune-main used
+ * as *foreground text* (titles), handled explicitly below.
+ */
+:root.dark {
+  --color-bg-offwhite: #13131A;
+  --color-white-pure: #1C1C26;
+  --color-text-anthracite: #E8E4E0;
+  --color-prune-sec: #9B7AA0;
+  --color-sable-gold: #D4A87A;
+  --color-success-green: #3DAF8E;
+  --color-alert-red: #E07060;
+}
+
+/* prune-main as text would be dark-on-dark — lift it to a readable light plum. */
+:root.dark .text-prune-main,
+:root.dark .hover\:text-prune-main:hover,
+:root.dark .group-hover\:text-prune-main:is(:where(.group):hover *) {
+  color: #C9A4CF;
 }
 
 body {
@@ -37,95 +67,54 @@ body {
   animation: shimmer 1.5s ease-in-out infinite;
 }
 
-:root.dark {
-  --color-bg-offwhite: #13131A;
-  --color-white-pure: #1C1C26;
-  --color-text-anthracite: #E8E4E0;
-  --color-prune-sec: #9B7AA0;
-  --color-sable-gold: #D4A87A;
-  --color-success-green: #3DAF8E;
-  --color-alert-red: #E07060;
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
-:root.dark .bg-white-pure { background-color: #1C1C26; }
-:root.dark .text-text-anthracite { color: #E8E4E0; }
-:root.dark .text-text-anthracite\/5 { color: #E8E4E0; }
-:root.dark .text-text-anthracite\/30 { color: color-mix(in oklab, #E8E4E0 30%, transparent); }
-:root.dark .text-text-anthracite\/40 { color: color-mix(in oklab, #E8E4E0 40%, transparent); }
-:root.dark .text-text-anthracite\/50 { color: color-mix(in oklab, #E8E4E0 50%, transparent); }
-:root.dark .text-text-anthracite\/60 { color: color-mix(in oklab, #E8E4E0 60%, transparent); }
-:root.dark .text-text-anthracite\/70 { color: color-mix(in oklab, #E8E4E0 70%, transparent); }
-:root.dark .text-text-anthracite\/\[0\.02\] { color: color-mix(in oklab, #E8E4E0 2%, transparent); }
-:root.dark .border-text-anthracite\/5 { border-color: color-mix(in oklab, #E8E4E0 5%, transparent); }
-:root.dark .border-text-anthracite\/10 { border-color: color-mix(in oklab, #E8E4E0 10%, transparent); }
-:root.dark .border-text-anthracite\/15 { border-color: color-mix(in oklab, #E8E4E0 15%, transparent); }
-:root.dark .border-text-anthracite\/20 { border-color: color-mix(in oklab, #E8E4E0 20%, transparent); }
-:root.dark .bg-text-anthracite\/5 { background-color: color-mix(in oklab, #E8E4E0 5%, transparent); }
-:root.dark .bg-text-anthracite\/8 { background-color: color-mix(in oklab, #E8E4E0 8%, transparent); }
-:root.dark .bg-text-anthracite\/\[0\.02\] { background-color: color-mix(in oklab, #E8E4E0 2%, transparent); }
-:root.dark .bg-bg-offwhite { background-color: #13131A; }
-:root.dark .text-prune-sec { color: #9B7AA0; }
-:root.dark .text-prune-sec\/40 { color: color-mix(in oklab, #9B7AA0 40%, transparent); }
-:root.dark .text-prune-sec\/60 { color: color-mix(in oklab, #9B7AA0 60%, transparent); }
-:root.dark .text-sable-gold { color: #D4A87A; }
-:root.dark .text-success-green { color: #3DAF8E; }
-:root.dark .text-success-green\/40 { color: color-mix(in oklab, #3DAF8E 40%, transparent); }
-:root.dark .text-alert-red { color: #E07060; }
-:root.dark .text-alert-red\/50 { color: color-mix(in oklab, #E07060 50%, transparent); }
-:root.dark .border-prune-main { border-color: #4A2C52; }
-:root.dark .border-prune-main\/15 { border-color: color-mix(in oklab, #4A2C52 15%, transparent); }
-:root.dark .border-prune-main\/20 { border-color: color-mix(in oklab, #4A2C52 20%, transparent); }
-:root.dark .border-prune-main\/30 { border-color: color-mix(in oklab, #4A2C52 30%, transparent); }
-:root.dark .border-prune-sec\/20 { border-color: color-mix(in oklab, #9B7AA0 20%, transparent); }
-:root.dark .border-sable-gold\/20 { border-color: color-mix(in oklab, #D4A87A 20%, transparent); }
-:root.dark .border-sable-gold\/30 { border-color: color-mix(in oklab, #D4A87A 30%, transparent); }
-:root.dark .border-sable-gold\/40 { border-color: color-mix(in oklab, #D4A87A 40%, transparent); }
-:root.dark .border-sable-gold\/50 { border-color: color-mix(in oklab, #D4A87A 50%, transparent); }
-:root.dark .border-success-green { border-color: #3DAF8E; }
-:root.dark .border-success-green\/20 { border-color: color-mix(in oklab, #3DAF8E 20%, transparent); }
-:root.dark .border-success-green\/30 { border-color: color-mix(in oklab, #3DAF8E 30%, transparent); }
-:root.dark .border-alert-red { border-color: #E07060; }
-:root.dark .border-alert-red\/20 { border-color: color-mix(in oklab, #E07060 20%, transparent); }
-:root.dark .border-alert-red\/30 { border-color: color-mix(in oklab, #E07060 30%, transparent); }
-:root.dark .bg-prune-main { background-color: #4A2C52; }
-:root.dark .bg-prune-main\/5 { background-color: color-mix(in oklab, #4A2C52 5%, transparent); }
-:root.dark .bg-prune-main\/10 { background-color: color-mix(in oklab, #4A2C52 10%, transparent); }
-:root.dark .bg-prune-sec\/10 { background-color: color-mix(in oklab, #9B7AA0 10%, transparent); }
-:root.dark .bg-prune-sec\/30 { background-color: color-mix(in oklab, #9B7AA0 30%, transparent); }
-:root.dark .bg-prune-light\/40 { background-color: color-mix(in oklab, #ECD8EE 40%, transparent); }
-:root.dark .bg-sable-gold { background-color: #D4A87A; }
-:root.dark .bg-sable-gold\/10 { background-color: color-mix(in oklab, #D4A87A 10%, transparent); }
-:root.dark .bg-success-green { background-color: #3DAF8E; }
-:root.dark .bg-success-green\/5 { background-color: color-mix(in oklab, #3DAF8E 5%, transparent); }
-:root.dark .bg-success-green\/10 { background-color: color-mix(in oklab, #3DAF8E 10%, transparent); }
-:root.dark .bg-success-green\/\[0\.02\] { background-color: color-mix(in oklab, #3DAF8E 2%, transparent); }
-:root.dark .bg-alert-red { background-color: #E07060; }
-:root.dark .bg-alert-red\/5 { background-color: color-mix(in oklab, #E07060 5%, transparent); }
-:root.dark .bg-alert-red\/10 { background-color: color-mix(in oklab, #E07060 10%, transparent); }
-:root.dark .from-prune-main { --tw-gradient-from: #4A2C52; }
-:root.dark .from-prune-main\/20 { --tw-gradient-from: color-mix(in oklab, #4A2C52 20%, transparent); }
-:root.dark .to-success-green { --tw-gradient-to: #3DAF8E; }
-:root.dark .to-prune-main\/20 { --tw-gradient-to: color-mix(in oklab, #4A2C52 20%, transparent); }
-:root.dark .via-prune-main { --tw-gradient-via: #4A2C52; }
-:root.dark .divide-text-anthracite\/5 > :not(:last-child) { border-color: color-mix(in oklab, #E8E4E0 5%, transparent); }
-:root.dark .placeholder\:text-text-anthracite\/30::placeholder { color: color-mix(in oklab, #E8E4E0 30%, transparent); }
-
-@media (hover: hover) {
-  :root.dark .hover\:bg-bg-offwhite:hover { background-color: #13131A; }
-  :root.dark .hover\:text-prune-main:hover { color: #4A2C52; }
-  :root.dark .hover\:text-prune-sec:hover { color: #9B7AA0; }
-  :root.dark .hover\:text-prune-light:hover { color: #ECD8EE; }
-  :root.dark .hover\:text-alert-red:hover { color: #E07060; }
-  :root.dark .hover\:bg-prune-main\/5:hover { background-color: color-mix(in oklab, #4A2C52 5%, transparent); }
-  :root.dark .hover\:bg-prune-main\/\[0\.02\]:hover { background-color: color-mix(in oklab, #4A2C52 2%, transparent); }
-  :root.dark .hover\:bg-prune-sec:hover { background-color: #9B7AA0; }
-  :root.dark .hover\:bg-prune-sec\/10:hover { background-color: color-mix(in oklab, #9B7AA0 10%, transparent); }
-  :root.dark .hover\:bg-alert-red\/5:hover { background-color: color-mix(in oklab, #E07060 5%, transparent); }
-  :root.dark .hover\:bg-text-anthracite\/5:hover { background-color: color-mix(in oklab, #E8E4E0 5%, transparent); }
-  :root.dark .hover\:border-prune-sec\/20:hover { border-color: color-mix(in oklab, #9B7AA0 20%, transparent); }
-  :root.dark .hover\:border-text-anthracite\/30:hover { border-color: color-mix(in oklab, #E8E4E0 30%, transparent); }
-  :root.dark .group-hover\:border-text-anthracite\/40:is(:where(.group):hover *) { border-color: color-mix(in oklab, #E8E4E0 40%, transparent); }
-  :root.dark .group-hover\:text-prune-main:is(:where(.group):hover *) { color: #4A2C52; }
+@keyframes status-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(46, 125, 100, 0.5); }
+  50% { box-shadow: 0 0 0 6px rgba(46, 125, 100, 0.15); }
+  100% { box-shadow: 0 0 0 0 rgba(46, 125, 100, 0); }
 }
 
-:root.dark .focus\:border-prune-main:focus { border-color: #4A2C52; }
+.animate-status-pulse {
+  animation: status-pulse 3.5s ease-out forwards;
+}
+
+@keyframes burst-in {
+  0% { transform: scale(0); opacity: 0; }
+  50% { transform: scale(1.3); }
+  70% { transform: scale(0.9); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes ring-expand {
+  0% { transform: scale(0.5); opacity: 0; }
+  50% { opacity: 0.4; }
+  100% { transform: scale(2.5); opacity: 0; }
+}
+
+.animate-burst-in {
+  animation: burst-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.animate-ring-expand {
+  animation: ring-expand 0.7s ease-out forwards;
+}
+
+/* Tampon « COMPLÉTÉE » qui s'abat sur la feuille */
+@keyframes stamp-slam {
+  0% { transform: translate(-50%, -50%) scale(2.6) rotate(-18deg); opacity: 0; filter: blur(4px); }
+  55% { transform: translate(-50%, -50%) scale(0.9) rotate(-12deg); opacity: 1; filter: blur(0); }
+  70% { transform: translate(-50%, -50%) scale(1.08) rotate(-12deg); }
+  100% { transform: translate(-50%, -50%) scale(1) rotate(-12deg); opacity: 1; filter: blur(0); }
+}
+
+.animate-stamp-slam {
+  animation: stamp-slam 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
